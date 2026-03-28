@@ -39,6 +39,7 @@ copyFileSync(join(root, 'addon/content/icons/favicon.png'), join(dist, 'content/
 // so startup/shutdown are available as ctx.exports.startup etc.
 writeFileSync(join(dist, 'bootstrap.js'), `/* Zotero 7 bootstrap shim — auto-generated, based on zotero-plugin-template */
 var chromeHandle;
+var ctx;
 
 function install(data, reason) {}
 function uninstall(data, reason) {}
@@ -52,15 +53,29 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
     ["content", "zotero-ai-companion", rootURI + "content/"],
   ]);
 
-  var ctx = { rootURI };
+  ctx = { rootURI };
   ctx._globalThis = ctx;
   Services.scriptloader.loadSubScript(rootURI + "content/bootstrap.js", ctx);
   await ctx.startup({ id, version, resourceURI, rootURI }, reason);
 }
 
+async function onMainWindowLoad({ window }, reason) {
+  if (ctx && typeof ctx.onMainWindowLoad === "function") {
+    await ctx.onMainWindowLoad({ window }, reason);
+  }
+}
+
+async function onMainWindowUnload({ window }, reason) {
+  if (ctx && typeof ctx.onMainWindowUnload === "function") {
+    await ctx.onMainWindowUnload({ window }, reason);
+  }
+}
+
 async function shutdown({ id, version, resourceURI, rootURI }, reason) {
   if (reason === APP_SHUTDOWN) return;
-  await _globalThis.shutdown({ id, version, resourceURI, rootURI }, reason);
+  if (ctx && typeof ctx.shutdown === "function") {
+    await ctx.shutdown({ id, version, resourceURI, rootURI }, reason);
+  }
   if (chromeHandle) {
     chromeHandle.destruct();
     chromeHandle = null;
