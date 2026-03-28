@@ -1,10 +1,12 @@
 // src/bootstrap.ts
 import { registerEventHooks, unregisterEventHooks } from './events';
 import { registerMenus, registerContextMenu } from './menu';
-import { getApiUrl, getSyncOnStartup, getAutoSync, getSyncInterval } from './prefs';
+import { getSyncOnStartup, getAutoSync, getSyncInterval } from './prefs';
 import { triggerSync } from './api/sync';
+import { apiFetch } from './api/client';
 
 let syncTimer: ReturnType<typeof setInterval> | null = null;
+const windowListeners = new Map<Window, EventListener>();
 
 export async function startup({ rootURI }: { id: string; version: string; rootURI: string }) {
   registerEventHooks();
@@ -43,14 +45,23 @@ export async function startup({ rootURI }: { id: string; version: string; rootUR
         .getCreators()
         .map((c: any) => ({ firstName: c.firstName || '', lastName: c.lastName || '' }));
 
-      const root = createRoot(body);
+      // Reuse existing root if present, create otherwise
+      let root = (body as any)._aiRoot;
+      if (!root) {
+        root = createRoot(body);
+        (body as any)._aiRoot = root;
+      }
+
       root.render(createElement(ItemPaneTab, {
         zoteroKey: item.key,
         title: item.getField('title'),
         authors,
       }));
 
-      return () => root.unmount();
+      return () => {
+        root.unmount();
+        delete (body as any)._aiRoot;
+      };
     },
   });
 }
@@ -58,14 +69,23 @@ export async function startup({ rootURI }: { id: string; version: string; rootUR
 export function shutdown() {
   unregisterEventHooks();
   if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
+  for (const [win, handler] of windowListeners) {
+    win.removeEventListener('zotero-ai-command', handler);
+    win.document.getElementById('zotero-ai-menu')?.remove();
+    win.document.getElementById('zotero-ai-cascade-delete')?.remove();
+  }
+  windowListeners.clear();
 }
 
 function initWindow(win: Window) {
   registerMenus(win);
   registerContextMenu(win);
-  win.addEventListener('zotero-ai-command', (e: Event) =>
-    handleCommand((e as CustomEvent).detail.command, win)
-  );
+  const handler: EventListener = (e: Event) =>
+    handleCommand((e as CustomEvent).detail.command, win).catch((err: unknown) =>
+      console.error('[AI Companion] Command error:', err)
+    );
+  win.addEventListener('zotero-ai-command', handler);
+  windowListeners.set(win, handler);
 }
 
 function scheduleSync() {
@@ -95,7 +115,7 @@ async function handleCommand(command: string, win: Window) {
         );
         if (confirmed) {
           try {
-            await fetch(`${getApiUrl()}/api/plugin/items/${item.key}`, { method: 'DELETE' });
+            await apiFetch(`/items/${item.key}`, { method: 'DELETE' });
             await (Zotero as any).Items.trashTx([item.id]);
           } catch (e) {
             console.error('[AI Companion] Cascade delete failed:', e);

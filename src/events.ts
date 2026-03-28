@@ -9,12 +9,11 @@ export function registerEventHooks() {
       notify: async (event: string, type: string, ids: number[]) => {
         if (type !== 'item') return;
         if (event === 'add') {
-          for (const id of ids) {
+          const hasRegular = ids.some((id) => {
             const item = Zotero.Items.get(id);
-            if (item && item.isRegularItem()) {
-              await queueSync();
-            }
-          }
+            return item && item.isRegularItem();
+          });
+          if (hasRegular) await queueSync();
         }
         if (event === 'modify') {
           await queueSync();
