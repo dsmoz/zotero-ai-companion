@@ -7,13 +7,19 @@ export interface ImportResult {
   error?: string;
 }
 
+function normalizeDoi(doi: string): string {
+  // Strip OpenAlex-style "https://doi.org/" prefix and PubMed "doi: " prefix
+  return doi.replace(/^https?:\/\/doi\.org\//i, '').replace(/^doi:\s*/i, '').trim();
+}
+
 export async function importToZotero(results: DiscoveryResult[]): Promise<ImportResult[]> {
   const Z = (globalThis as any).Zotero;
   const out: ImportResult[] = [];
 
   for (const r of results) {
     try {
-      const identifier = r.doi ? `DOI:${r.doi}` : r.pmid ? `PMID:${r.pmid}` : null;
+      const cleanDoi = r.doi ? normalizeDoi(r.doi) : '';
+      const identifier = cleanDoi ? `DOI:${cleanDoi}` : r.pmid ? `PMID:${r.pmid}` : null;
 
       if (identifier) {
         // Lookup via CrossRef/PubMed — fetches full metadata automatically (same as Zotero Connector)
