@@ -1,7 +1,7 @@
 // src/ui/HealthPanel.tsx
 import React, { useState, useEffect } from 'react';
 import { SectionHeader } from './components/SectionHeader';
-import { fetchLibraryHealth, LibraryHealth } from '../api/health';
+import { fetchLibraryHealth, indexAllPending, fixOrphans, LibraryHealth } from '../api/health';
 
 const ISSUE_COLORS: Record<string, string> = {
   failed_sync: '#f38ba8',
@@ -24,12 +24,40 @@ const ISSUE_ACTIONS: Record<string, string> = {
 export function HealthPanel() {
   const [health, setHealth] = useState<LibraryHealth | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     const h = await fetchLibraryHealth();
     setHealth(h);
+  }
+
+  async function handleIndexPending() {
+    setBusy('index');
+    try {
+      const r = await indexAllPending();
+      await load();
+      window.alert(`Queued ${r.queued} item(s) for indexing.`);
+    } catch (e: any) {
+      window.alert(`Failed: ${e.message}`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleFixOrphans() {
+    if (!window.confirm('Remove orphaned synctracker records? This cannot be undone.')) return;
+    setBusy('orphans');
+    try {
+      const r = await fixOrphans();
+      await load();
+      window.alert(`Removed ${r.removed} orphan(s).`);
+    } catch (e: any) {
+      window.alert(`Failed: ${e.message}`);
+    } finally {
+      setBusy(null);
+    }
   }
 
   const filtered = health?.issues.filter(i => !filter || i.issue_type === filter) ?? [];
@@ -91,14 +119,26 @@ export function HealthPanel() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <button style={{ fontSize: '0.7rem', padding: '3px 8px', background: '#313244', border: '1px solid #444', borderRadius: 4, color: '#cdd6f4', cursor: 'pointer' }}>
-              Retry all failed
+            <button
+              disabled={busy !== null}
+              onClick={handleIndexPending}
+              style={{ fontSize: '0.7rem', padding: '3px 8px', background: '#313244', border: '1px solid #444', borderRadius: 4, color: '#cdd6f4', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+            >
+              {busy === 'index' ? '...' : 'Retry all failed'}
             </button>
-            <button style={{ fontSize: '0.7rem', padding: '3px 8px', background: '#313244', border: '1px solid #444', borderRadius: 4, color: '#cdd6f4', cursor: 'pointer' }}>
-              Index all pending
+            <button
+              disabled={busy !== null}
+              onClick={handleIndexPending}
+              style={{ fontSize: '0.7rem', padding: '3px 8px', background: '#313244', border: '1px solid #444', borderRadius: 4, color: '#cdd6f4', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+            >
+              {busy === 'index' ? '...' : 'Index all pending'}
             </button>
-            <button style={{ fontSize: '0.7rem', padding: '3px 8px', border: '1px solid #f38ba8', color: '#f38ba8', background: 'transparent', borderRadius: 4, cursor: 'pointer' }}>
-              Fix orphans
+            <button
+              disabled={busy !== null}
+              onClick={handleFixOrphans}
+              style={{ fontSize: '0.7rem', padding: '3px 8px', border: '1px solid #f38ba8', color: '#f38ba8', background: 'transparent', borderRadius: 4, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+            >
+              {busy === 'orphans' ? '...' : 'Fix orphans'}
             </button>
           </div>
         </>

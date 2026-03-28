@@ -23,3 +23,14 @@ export interface LibraryHealth {
 export async function fetchLibraryHealth(): Promise<LibraryHealth> {
   return apiFetch<LibraryHealth>('/health/library');
 }
+
+export async function indexAllPending(): Promise<{ queued: number }> {
+  return apiFetch<{ queued: number }>('/sync', { method: 'POST' });
+}
+
+export async function fixOrphans(): Promise<{ removed: number; dry_run: boolean }> {
+  return apiFetch('/cleanup/orphans', {
+    method: 'POST',
+    body: JSON.stringify({ dry_run: false }),
+  });
+}
