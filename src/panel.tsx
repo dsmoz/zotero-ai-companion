@@ -16,9 +16,18 @@ const panel = params.get('panel') ?? 'graph';
 if (panel === 'multi-doc-chat') {
   const keysParam = params.get('keys') ?? '[]';
   let keys: string[] = [];
-  try { keys = JSON.parse(decodeURIComponent(keysParam)); } catch { keys = []; }
+  let initialAbstract = '';
+  try {
+    const parsed = JSON.parse(decodeURIComponent(keysParam));
+    if (Array.isArray(parsed)) {
+      keys = parsed;
+    } else {
+      keys = parsed.keys ?? [];
+      initialAbstract = parsed.abstract ?? '';
+    }
+  } catch { keys = []; }
   const root = createRoot(document.getElementById('root')!);
-  root.render(createElement(MultiDocChat, { zoteroKeys: keys }));
+  root.render(createElement(MultiDocChat, { zoteroKeys: keys, initialAbstract }));
 } else if (panel === 'item-chat') {
   const key = params.get('key') ?? '';
   const title = decodeURIComponent(params.get('title') ?? '');

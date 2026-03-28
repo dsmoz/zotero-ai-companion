@@ -270,13 +270,14 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
       const rawKeys = event?.detail?.keys;
       const keys: string[] = Array.isArray(rawKeys) ? rawKeys : [];
       if (keys.length === 0) break;
+      const abstract: string = (event?.detail?.abstract as string) || '';
       try {
         win.openDialog(
           `chrome://zotero-ai-companion/content/panel.xhtml`,
           `zotero-ai-chat-docs-${Date.now()}`,
           `chrome,dialog=no,resizable,centerscreen,width=720,height=600`,
           'multi-doc-chat',
-          JSON.stringify(keys),
+          JSON.stringify({ keys, abstract }),
         );
       } catch(e) {
         console.error('[AI Companion] openDialog failed:', e);
@@ -300,7 +301,7 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
           `zotero-ai-chat-docs-${Date.now()}`,
           `chrome,dialog=no,resizable,centerscreen,width=720,height=600`,
           'multi-doc-chat',
-          JSON.stringify(keys),
+          JSON.stringify({ keys, abstract: '' }),
         );
       } catch(e) {
         console.error('[AI Companion] openDialog failed:', e);

@@ -42,6 +42,7 @@ export function streamMultiDocChat(
   zoteroKeys: string[],
   question: string,
   sessionId: string,
+  initialAbstract: string,
   onToken: (token: string) => void,
   onDone: (sources: Source[]) => void,
   onError: (err: string) => void,
@@ -53,7 +54,7 @@ export function streamMultiDocChat(
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ zotero_keys: zoteroKeys, question, session_id: sessionId }),
+    body: JSON.stringify({ zotero_keys: zoteroKeys, question, session_id: sessionId, abstract: initialAbstract }),
     signal: controller.signal,
   }).then(async resp => {
     if (!resp.ok) { onError(`HTTP ${resp.status}`); return; }

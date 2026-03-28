@@ -296,7 +296,7 @@ export function ItemPaneTab({ zoteroKey, title, authors: initialAuthors }: Props
                       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <button
                           onClick={() => window.parent.dispatchEvent(new CustomEvent('zotero-ai-command', {
-                            detail: { command: 'openSingleDocChat', keys: [item.key] },
+                            detail: { command: 'openSingleDocChat', keys: [item.key], abstract: item.abstract || '' },
                           }))}
                           style={{ background: 'var(--accent, #89b4fa)', border: 'none', borderRadius: 3,
                                    padding: '1px 6px', fontSize: '0.6rem', color: '#1e1e2e', cursor: 'pointer' }}

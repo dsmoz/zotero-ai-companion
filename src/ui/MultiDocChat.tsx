@@ -12,6 +12,7 @@ interface Message { role: 'user' | 'assistant'; text: string; sources?: Source[]
 
 interface Props {
   zoteroKeys: string[];
+  initialAbstract?: string;
 }
 
 // All assistant text is sanitized with DOMPurify before rendering
@@ -43,7 +44,7 @@ function DocIcon({ itemType }: { itemType: string }) {
   return <FilePdf size={14} weight="duotone" style={style} />;
 }
 
-export function MultiDocChat({ zoteroKeys }: Props) {
+export function MultiDocChat({ zoteroKeys, initialAbstract = '' }: Props) {
   const [docs, setDocs] = useState<DocMeta[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -79,6 +80,7 @@ export function MultiDocChat({ zoteroKeys }: Props) {
       zoteroKeys,
       question,
       sessionId.current,
+      initialAbstract,
       (token) => {
         buffer += token;
         setMessages(prev => [...prev.slice(0, -1), { role: 'assistant', text: buffer }]);
