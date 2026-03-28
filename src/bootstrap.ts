@@ -131,12 +131,17 @@ async function handleCommand(command: string, win: Window) {
       const existing = (Services as any).wm.getWindowByName(winId, null);
       if (existing) { existing.focus(); break; }
 
-      win.openDialog(
-        `chrome://zotero-ai-companion/content/panel.xhtml`,
-        winId,
-        `chrome,dialog=no,resizable,centerscreen,width=${def.width},height=${def.height}`,
-        def.panel,
-      );
+      try {
+        const newWin = win.openDialog(
+          `chrome://zotero-ai-companion/content/panel.xhtml`,
+          winId,
+          `chrome,dialog=no,resizable,centerscreen,width=${def.width},height=${def.height}`,
+          def.panel,
+        );
+        console.log('[AI Companion] openDialog result:', newWin);
+      } catch(e) {
+        console.error('[AI Companion] openDialog failed:', e);
+      }
       break;
     }
     case 'cascadeDelete': {
