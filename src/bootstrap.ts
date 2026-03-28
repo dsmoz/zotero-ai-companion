@@ -90,6 +90,7 @@ function onMainWindowUnload({ window: win }: { window: Window }) {
   win.document.getElementById('zotero-ai-index-selected')?.remove();
   win.document.getElementById('zotero-ai-chat-docs')?.remove();
   win.document.getElementById('zotero-ai-toolbar-btn')?.remove();
+  win.document.getElementById('zotero-ai-toolbar-btn-style')?.remove();
 }
 
 function initWindow(win: Window) {

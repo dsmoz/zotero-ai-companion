@@ -64,12 +64,17 @@ export function registerToolbarButton(win: Window) {
   if (!toolbar) return;
   if (doc.getElementById('zotero-ai-toolbar-btn')) return;
 
+  // Inject CSS so the toolbar button icon works via list-style-image (Zotero 7 pattern)
+  const style = doc.createElement('style');
+  style.setAttribute('id', 'zotero-ai-toolbar-btn-style');
+  style.textContent = `#zotero-ai-toolbar-btn { list-style-image: url("${svgIcon(ICONS.sparkle)}"); }`;
+  doc.head?.appendChild(style);
+
   const btn = (doc as any).createXULElement('toolbarbutton');
   btn.setAttribute('id', 'zotero-ai-toolbar-btn');
   btn.setAttribute('class', 'zotero-tb-button');
   btn.setAttribute('tabindex', '-1');
   btn.setAttribute('tooltiptext', 'AI Companion');
-  btn.setAttribute('image', svgIcon(ICONS.sparkle));
   btn.setAttribute('type', 'menu');
   btn.setAttribute('wantdropmarker', 'true');
 
