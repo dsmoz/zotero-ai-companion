@@ -14,6 +14,8 @@ const DEFAULTS = {
   chatStream: true,
   autoCascadeDelete: false,
   healthPageSize: 10,
+  discoveryLimit: 10,
+  discoveryPageSize: 10,
   // Discovery sources stored as JSON string: [{id, label, enabled}]
   discoverySources: JSON.stringify([
     { id: 'pubmed',           label: 'PubMed',           enabled: true  },
@@ -50,6 +52,8 @@ export const getSyncOnStartup = () => get('syncOnStartup') as boolean;
 export const getAutoSync = () => get('autoSync') as boolean;
 export const getAutoCascadeDelete = () => get('autoCascadeDelete') as boolean;
 export const getHealthPageSize = () => get('healthPageSize') as number;
+export const getDiscoveryLimit = () => get('discoveryLimit') as number;
+export const getDiscoveryPageSize = () => get('discoveryPageSize') as number;
 
 export interface DiscoverySource {
   id: string;

@@ -1,9 +1,9 @@
 // src/ui/DiscoveryPanel.tsx
-import React, { useState } from 'react';
-import { Plus, Check } from '@phosphor-icons/react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Check, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { StripedList } from './components/StripedList';
 import { discoverySearch, DiscoveryResult } from '../api/discovery';
-import { getDiscoverySources } from '../prefs';
+import { getDiscoverySources, getDiscoveryLimit, getDiscoveryPageSize } from '../prefs';
 
 interface Props { seedQuery?: string; seedAuthor?: string; }
 
@@ -18,23 +18,36 @@ function sourceColor(id: string) {
   return SOURCE_COLORS[id] ?? '#cba6f7';
 }
 
+function resultKey(r: DiscoveryResult): string {
+  return `${r.source}:${r.doi || r.pmid || r.s2_id || r.url || r.title}`;
+}
+
+type SortKey = 'relevance' | 'year' | 'title' | 'source';
+
 export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
   const [query, setQuery] = useState(seedQuery || seedAuthor);
   const [results, setResults] = useState<DiscoveryResult[]>([]);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
-  // null = All, otherwise a single source id
   const [activeSource, setActiveSource] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortKey>('relevance');
+  const [filterHasDoi, setFilterHasDoi] = useState(false);
+  const [yearFrom, setYearFrom] = useState('');
+  const [yearTo, setYearTo] = useState('');
+  const [page, setPage] = useState(1);
 
-  const enabledSources = getDiscoverySources().filter(s => s.enabled);
+  const enabledSources = useMemo(() => getDiscoverySources().filter(s => s.enabled), []);
+  const pageSize = getDiscoveryPageSize();
 
   async function search() {
     if (!query.trim()) return;
     setLoading(true);
+    setPage(1);
     try {
       const sources = activeSource ? [activeSource] : enabledSources.map(s => s.id);
-      const r = await discoverySearch(query, sources);
+      const limit = getDiscoveryLimit();
+      const r = await discoverySearch(query, sources, limit);
       setResults(r);
       setSelected(new Set());
     } finally {
@@ -42,8 +55,40 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
     }
   }
 
+  // Filter
+  const filtered = useMemo(() => {
+    let r = results;
+    if (activeSource) r = r.filter(x => x.source === activeSource);
+    if (filterHasDoi) r = r.filter(x => !!x.doi || !!x.pmid);
+    if (yearFrom) r = r.filter(x => x.year >= yearFrom);
+    if (yearTo)   r = r.filter(x => x.year && x.year <= yearTo);
+    return r;
+  }, [results, activeSource, filterHasDoi, yearFrom, yearTo]);
+
+  // Sort
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    if (sortBy === 'year')   arr.sort((a, b) => (b.year || '0').localeCompare(a.year || '0'));
+    if (sortBy === 'title')  arr.sort((a, b) => a.title.localeCompare(b.title));
+    if (sortBy === 'source') arr.sort((a, b) => a.source.localeCompare(b.source));
+    return arr;
+  }, [filtered, sortBy]);
+
+  // Paginate
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const paginated = sorted.slice((page - 1) * pageSize, page * pageSize);
+
+  function toggleSelect(r: DiscoveryResult) {
+    const k = resultKey(r);
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(k) ? next.delete(k) : next.add(k);
+      return next;
+    });
+  }
+
   async function handleImport() {
-    const toImport = results.filter((_, i) => selected.has(i));
+    const toImport = sorted.filter(r => selected.has(resultKey(r)));
     setImporting(true);
     try {
       const { importToZotero } = await import('../api/import');
@@ -65,42 +110,38 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
     }
   }
 
-  function toggleSelect(i: number) {
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
-      return next;
-    });
-  }
+  const pill = (label: string, active: boolean, onClick: () => void, color?: string) => (
+    <button onClick={onClick} style={{
+      padding: '2px 10px', fontSize: '0.65rem', borderRadius: 99,
+      border: active ? `1px solid ${color ?? 'var(--accent, #89b4fa)'}` : '1px solid #444',
+      background: active ? `color-mix(in srgb, ${color ?? 'var(--accent, #89b4fa)'} 15%, transparent)` : 'transparent',
+      color: active ? (color ?? 'var(--accent, #89b4fa)') : '#6c7086',
+      cursor: 'pointer',
+    }}>{label}</button>
+  );
+
+  const seg = (options: string[], value: string, onChange: (v: string) => void) => (
+    <div style={{ display: 'flex', gap: 2 }}>
+      {options.map(opt => (
+        <button key={opt} onClick={() => onChange(opt)} style={{
+          background: value === opt ? '#313244' : 'transparent',
+          border: value === opt ? '1px solid var(--accent, #89b4fa)' : '1px solid #444',
+          color: value === opt ? '#cdd6f4' : '#6c7086',
+          borderRadius: 3, padding: '1px 6px', fontSize: '0.65rem', cursor: 'pointer',
+        }}>{opt}</button>
+      ))}
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontSize: '0.8rem' }}>
 
-      {/* Source selector */}
+      {/* Source pills */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 8px', borderBottom: '1px solid var(--color-border, #313244)', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setActiveSource(null)}
-          style={{
-            padding: '2px 10px', fontSize: '0.65rem', borderRadius: 99,
-            border: activeSource === null ? '1px solid var(--accent, #89b4fa)' : '1px solid #444',
-            background: activeSource === null ? 'color-mix(in srgb, var(--accent, #89b4fa) 15%, transparent)' : 'transparent',
-            color: activeSource === null ? 'var(--accent, #89b4fa)' : '#6c7086',
-            cursor: 'pointer',
-          }}
-        >All</button>
-        {enabledSources.map(src => (
-          <button
-            key={src.id}
-            onClick={() => setActiveSource(activeSource === src.id ? null : src.id)}
-            style={{
-              padding: '2px 10px', fontSize: '0.65rem', borderRadius: 99,
-              border: activeSource === src.id ? `1px solid ${sourceColor(src.id)}` : '1px solid #444',
-              background: activeSource === src.id ? `color-mix(in srgb, ${sourceColor(src.id)} 15%, transparent)` : 'transparent',
-              color: activeSource === src.id ? sourceColor(src.id) : '#6c7086',
-              cursor: 'pointer',
-            }}
-          >{src.label}</button>
-        ))}
+        {pill('All', activeSource === null, () => { setActiveSource(null); setPage(1); })}
+        {enabledSources.map(src =>
+          pill(src.label, activeSource === src.id, () => { setActiveSource(activeSource === src.id ? null : src.id); setPage(1); }, sourceColor(src.id))
+        )}
         {enabledSources.length === 0 && (
           <span style={{ fontSize: '0.65rem', color: '#f38ba8' }}>No sources enabled — configure in Settings</span>
         )}
@@ -122,46 +163,92 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
         >{loading ? '...' : 'Search'}</button>
       </div>
 
+      {/* Filter + sort toolbar — only shown when there are results */}
+      {results.length > 0 && (
+        <div style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border, #313244)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ color: '#6c7086', fontSize: '0.6rem' }}>Sort:</span>
+          {seg(['Relevance', 'Year ↓', 'Title', 'Source'],
+            sortBy === 'relevance' ? 'Relevance' : sortBy === 'year' ? 'Year ↓' : sortBy === 'title' ? 'Title' : 'Source',
+            v => { setSortBy(v === 'Year ↓' ? 'year' : v.toLowerCase() as SortKey); setPage(1); }
+          )}
+          <div style={{ width: 1, height: 14, background: '#313244' }} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.6rem', color: filterHasDoi ? '#cdd6f4' : '#6c7086', cursor: 'pointer' }}>
+            <input type="checkbox" checked={filterHasDoi} onChange={e => { setFilterHasDoi(e.target.checked); setPage(1); }}
+              style={{ accentColor: 'var(--accent, #89b4fa)', width: 10, height: 10 }} />
+            Has DOI/ID
+          </label>
+          <div style={{ width: 1, height: 14, background: '#313244' }} />
+          <span style={{ color: '#6c7086', fontSize: '0.6rem' }}>Year:</span>
+          <input value={yearFrom} onChange={e => { setYearFrom(e.target.value); setPage(1); }} placeholder="from"
+            style={{ width: 42, fontSize: '0.6rem', padding: '1px 4px', background: '#313244', border: '1px solid #444', borderRadius: 3, color: '#cdd6f4' }} />
+          <span style={{ color: '#6c7086', fontSize: '0.6rem' }}>–</span>
+          <input value={yearTo} onChange={e => { setYearTo(e.target.value); setPage(1); }} placeholder="to"
+            style={{ width: 42, fontSize: '0.6rem', padding: '1px 4px', background: '#313244', border: '1px solid #444', borderRadius: 3, color: '#cdd6f4' }} />
+          <span style={{ marginLeft: 'auto', color: '#6c7086', fontSize: '0.6rem' }}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+
       {/* Results */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
         {loading && <div style={{ color: '#6c7086', textAlign: 'center', padding: '1rem' }}>Searching...</div>}
         {!loading && (
           <StripedList emptyMessage="No results">
-            {results.map((r, i) => (
-              <div key={i} onClick={() => toggleSelect(i)} style={{
-                padding: '6px 8px', cursor: 'pointer',
-                borderLeft: selected.has(i) ? '3px solid var(--accent, #89b4fa)' : `3px solid ${sourceColor(r.source)}`,
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1, marginRight: 8 }}>
-                    <div style={{ color: '#cdd6f4', marginBottom: 2 }}>{r.title}</div>
-                    {r.url
-                      ? <div style={{ color: '#6c7086', fontSize: '0.65rem', marginBottom: 2 }}>{r.url}</div>
-                      : <div style={{ color: '#6c7086', fontSize: '0.65rem' }}>
-                          {r.authors.slice(0, 3).join(', ')}{r.authors.length > 3 ? ' et al.' : ''}{r.journal ? ` · ${r.journal}` : ''}{r.year ? ` · ${r.year}` : ''}
+            {paginated.map((r) => {
+              const k = resultKey(r);
+              const isSelected = selected.has(k);
+              return (
+                <div key={k} onClick={() => toggleSelect(r)} style={{
+                  padding: '6px 8px', cursor: 'pointer',
+                  borderLeft: isSelected ? '3px solid var(--accent, #89b4fa)' : `3px solid ${sourceColor(r.source)}`,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1, marginRight: 8 }}>
+                      <div style={{ color: '#cdd6f4', marginBottom: 2 }}>{r.title}</div>
+                      {r.url
+                        ? <div style={{ color: '#6c7086', fontSize: '0.65rem', marginBottom: 2 }}>{r.url}</div>
+                        : <div style={{ color: '#6c7086', fontSize: '0.65rem' }}>
+                            {r.authors.slice(0, 3).join(', ')}{r.authors.length > 3 ? ' et al.' : ''}{r.journal ? ` · ${r.journal}` : ''}{r.year ? ` · ${r.year}` : ''}
+                          </div>
+                      }
+                      {r.snippet && (
+                        <div style={{ color: '#6c7086', fontSize: '0.6rem', marginBottom: 2, fontStyle: 'italic' }}>
+                          {r.snippet.length > 120 ? r.snippet.slice(0, 120) + '…' : r.snippet}
                         </div>
-                    }
-                    {r.snippet && (
-                      <div style={{ color: '#6c7086', fontSize: '0.6rem', marginBottom: 2, fontStyle: 'italic' }}>
-                        {r.snippet.length > 120 ? r.snippet.slice(0, 120) + '…' : r.snippet}
+                      )}
+                      <div style={{ marginTop: 2 }}>
+                        <span style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: 99, background: `color-mix(in srgb, ${sourceColor(r.source)} 15%, transparent)`, color: sourceColor(r.source) }}>
+                          {r.source.replace('_', ' ')}
+                        </span>
                       </div>
-                    )}
-                    <div style={{ marginTop: 2 }}>
-                      <span style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: 99, background: `color-mix(in srgb, ${sourceColor(r.source)} 15%, transparent)`, color: sourceColor(r.source) }}>
-                        {r.source.replace('_', ' ')}
-                      </span>
                     </div>
+                    {isSelected
+                      ? <Check size={14} style={{ color: 'var(--accent, #89b4fa)', flexShrink: 0 }} weight="bold" />
+                      : <Plus size={14} style={{ color: '#6c7086', flexShrink: 0 }} />
+                    }
                   </div>
-                  {selected.has(i)
-                    ? <Check size={14} style={{ color: 'var(--accent, #89b4fa)', flexShrink: 0 }} weight="bold" />
-                    : <Plus size={14} style={{ color: '#6c7086', flexShrink: 0 }} />
-                  }
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </StripedList>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ padding: '4px 8px', borderTop: '1px solid var(--color-border, #313244)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+            style={{ background: 'transparent', border: 'none', color: page === 1 ? '#444' : '#cdd6f4', cursor: page === 1 ? 'default' : 'pointer', padding: 2 }}>
+            <CaretLeft size={12} />
+          </button>
+          <span style={{ fontSize: '0.65rem', color: '#6c7086' }}>
+            {page} / {totalPages}
+          </span>
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+            style={{ background: 'transparent', border: 'none', color: page === totalPages ? '#444' : '#cdd6f4', cursor: page === totalPages ? 'default' : 'pointer', padding: 2 }}>
+            <CaretRight size={12} />
+          </button>
+        </div>
+      )}
 
       {/* Import footer */}
       {selected.size > 0 && (

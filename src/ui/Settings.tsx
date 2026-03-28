@@ -11,7 +11,7 @@ import {
   getApiUrl, setApiUrl, getSyncInterval, setSyncInterval,
   getTheme, setTheme, getAutoSync, getChatModel, getChatMaxChunks,
   getSyncOnStartup, getDiscoverySources, setDiscoverySources,
-  getHealthPageSize, setPref, DiscoverySource,
+  getHealthPageSize, getDiscoveryLimit, getDiscoveryPageSize, setPref, DiscoverySource,
 } from '../prefs';
 
 type ConnectionStatus = 'connected' | 'degraded' | 'offline';
@@ -30,6 +30,8 @@ export function Settings() {
   const [newSourceId, setNewSourceId] = useState('');
   const [newSourceLabel, setNewSourceLabel] = useState('');
   const [healthPageSize, setHealthPageSizeState] = useState(getHealthPageSize());
+  const [discoveryLimit, setDiscoveryLimitState] = useState(getDiscoveryLimit());
+  const [discoveryPageSize, setDiscoveryPageSizeState] = useState(getDiscoveryPageSize());
   const [confirmAction, setConfirmAction] = useState<null | 'reindex' | 'clear'>(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -113,6 +115,16 @@ export function Settings() {
         )}
         {row('Max chunks', segmented(['4', '8', '12', '20'], String(chatMaxChunks), v => {
           const n = parseInt(v); setChatMaxChunksState(n); setPref('chatMaxChunks', n as any);
+        }))}
+      </section>
+
+      <section style={{ borderBottom: '1px solid #313244', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
+        <SectionHeader>DISCOVERY</SectionHeader>
+        {row('Results per source', segmented(['5', '10', '20', '50'], String(discoveryLimit), v => {
+          const n = parseInt(v); setDiscoveryLimitState(n); setPref('discoveryLimit', n as any);
+        }))}
+        {row('Results per page', segmented(['5', '10', '20'], String(discoveryPageSize), v => {
+          const n = parseInt(v); setDiscoveryPageSizeState(n); setPref('discoveryPageSize', n as any);
         }))}
       </section>
 
