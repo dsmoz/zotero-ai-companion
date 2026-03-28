@@ -126,7 +126,7 @@ async function handleCommand(command: string, win: Window) {
     case 'openHealth':
     case 'openQueue':
     case 'openSettings':
-      (Zotero as any).getActiveZoteroPane()?.openTab(`zotero-ai-${command.replace('open', '').toLowerCase()}`);
+      win.alert(`[AI Companion] Command received: ${command}\n\nTab UI not yet implemented.`);
       break;
     case 'cascadeDelete': {
       const selectedItems = (Zotero as any).getActiveZoteroPane()?.getSelectedItems() ?? [];
