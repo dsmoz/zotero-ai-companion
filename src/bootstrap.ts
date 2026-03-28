@@ -11,10 +11,6 @@ const windowListeners = new Map<Window, EventListener>();
 async function startup({ rootURI }: { id: string; version: string; rootURI: string }) {
   registerEventHooks();
 
-  for (const win of (Zotero as any).getMainWindows()) {
-    initWindow(win);
-  }
-
   if (getSyncOnStartup()) {
     try { await triggerSync(); } catch (e) { console.warn('[AI Companion] Startup sync failed:', e); }
   }
@@ -69,16 +65,25 @@ async function startup({ rootURI }: { id: string; version: string; rootURI: stri
 function shutdown() {
   unregisterEventHooks();
   if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
-  for (const [win, handler] of windowListeners) {
-    win.removeEventListener('zotero-ai-command', handler);
-    win.document.getElementById('zotero-ai-menu')?.remove();
-    win.document.getElementById('zotero-ai-cascade-delete')?.remove();
-    win.document.getElementById('zotero-ai-context-sep')?.remove();
-    win.document.getElementById('zotero-ai-color-sync')?.remove();
-    win.document.getElementById('zotero-ai-update-metadata')?.remove();
-    win.document.getElementById('zotero-ai-index-selected')?.remove();
-  }
   windowListeners.clear();
+}
+
+function onMainWindowLoad({ window: win }: { window: Window }) {
+  initWindow(win);
+}
+
+function onMainWindowUnload({ window: win }: { window: Window }) {
+  const handler = windowListeners.get(win);
+  if (handler) {
+    win.removeEventListener('zotero-ai-command', handler);
+    windowListeners.delete(win);
+  }
+  win.document.getElementById('zotero-ai-menu')?.remove();
+  win.document.getElementById('zotero-ai-cascade-delete')?.remove();
+  win.document.getElementById('zotero-ai-context-sep')?.remove();
+  win.document.getElementById('zotero-ai-color-sync')?.remove();
+  win.document.getElementById('zotero-ai-update-metadata')?.remove();
+  win.document.getElementById('zotero-ai-index-selected')?.remove();
 }
 
 function initWindow(win: Window) {
@@ -231,3 +236,5 @@ async function handleCommand(command: string, win: Window) {
 declare const _globalThis: any;
 _globalThis.startup = startup;
 _globalThis.shutdown = shutdown;
+_globalThis.onMainWindowLoad = onMainWindowLoad;
+_globalThis.onMainWindowUnload = onMainWindowUnload;
