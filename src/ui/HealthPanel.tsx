@@ -102,15 +102,15 @@ export function HealthPanel() {
             {card('No PDF', health.missing_pdf, 'missing_pdf', '#f9e2af')}
           </div>
           <SectionHeader>Issues</SectionHeader>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: '0.5rem' }}>
+          <div style={{ borderRadius: 4, overflow: 'hidden', marginBottom: '0.5rem' }}>
             {filtered.length === 0 && (
               <div style={{ color: '#6c7086', textAlign: 'center', padding: '1rem' }}>No issues</div>
             )}
-            {paginated.map(issue => (
+            {paginated.map((issue, idx) => (
               <div key={issue.zotero_key} style={{
-                background: '#1e1e2e',
+                background: idx % 2 === 0 ? '#1e1e2e' : '#181825',
                 borderLeft: `3px solid ${ISSUE_COLORS[issue.issue_type]}`,
-                borderRadius: 4, padding: '6px 8px',
+                padding: '6px 8px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
