@@ -3,9 +3,9 @@
     "zotero-ai-companion@dsmoz": {
       "updates": [
         {
-          "version": "0.1.9",
-          "update_link": "https://github.com/dsmoz/zotero-ai-companion/releases/download/v0.1.9/zotero-ai-companion.xpi",
-          "update_hash": "sha512:036070db7867b4e1bce204476d8231edceb3d42f5f9a6ab50fc2fbe06c0af3dcf6baea88a30cb53b74c84e9834c50e616de54cd06eea155983f4b5834a5c48de"
+          "version": "0.2.0",
+          "update_link": "https://github.com/dsmoz/zotero-ai-companion/releases/download/v0.2.0/zotero-ai-companion.xpi",
+          "update_hash": "sha512:58ccc7c4c5a0e2434a445619a070337be7767f2f1127336a6b61e1dc2415d464bbb078fee9f92f11f330acb78d876178a973069a5e00e71e24be3bd3c929fd55"
         }
       ]
     }
