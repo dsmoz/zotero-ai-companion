@@ -6,6 +6,8 @@ export interface Source {
   text?: string;
   zotero_key?: string;
   title?: string;
+  year?: string;
+  authors?: string;
 }
 
 export interface ChatMessage {

@@ -2,12 +2,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PaperPlaneTilt, MagnifyingGlass, User, Chat } from '@phosphor-icons/react';
 import { streamChat } from '../api/chat';
+import type { Source } from '../api/chat';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { similarItems, SearchResult } from '../api/search';
 import { fetchAuthorProfile, AuthorProfile } from '../api/author';
 import { ScoreChip } from './components/ScoreChip';
 
 type SubTab = 'chat' | 'similar' | 'author';
-interface Message { role: 'user' | 'assistant'; text: string; sources?: Array<{ page: number }> }
+interface Message { role: 'user' | 'assistant'; text: string; sources?: Source[] }
+
+function renderMarkdown(text: string): string {
+  const html = DOMPurify.sanitize(marked.parse(text) as string);
+  return html.replace(/\[(\d+)\]/g, '<sup class="citation-ref">[$1]</sup>');
+}
+
+function formatApaSource(s: Source, index: number): string {
+  const parts: string[] = [];
+  if (s.authors) parts.push(s.authors + '.');
+  if (s.year) parts.push(`(${s.year}).`);
+  if (s.title) parts.push(s.title + '.');
+  return `[${index + 1}] ${parts.join(' ')}`;
+}
 
 interface Props {
   zoteroKey: string;
@@ -101,10 +117,18 @@ export function ItemPaneTab({ zoteroKey, title, authors }: Props) {
                 border: m.role === 'assistant' ? '1px solid #444' : 'none',
                 borderRadius: 6, padding: '6px 10px', maxWidth: '90%', color: '#cdd6f4',
               }}>
-                {m.text}
+                {m.role === 'assistant' ? (
+                  // renderMarkdown runs DOMPurify.sanitize before setting innerHTML
+                  <AssistantMessage html={renderMarkdown(m.text)} />
+                ) : (
+                  <span>{m.text}</span>
+                )}
                 {m.sources && m.sources.length > 0 && (
-                  <div style={{ color: '#6c7086', fontSize: '0.65rem', marginTop: 4 }}>
-                    p.{m.sources.map(s => s.page).join(', ')} · {m.sources.length} chunk{m.sources.length !== 1 ? 's' : ''}
+                  <div className="sources-section">
+                    <div className="sources-section-label">Sources</div>
+                    {m.sources.map((s, si) => (
+                      <div key={si} className="source-entry">{formatApaSource(s, si)}</div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -193,4 +217,9 @@ export function ItemPaneTab({ zoteroKey, title, authors }: Props) {
       )}
     </div>
   );
+}
+
+// Isolated component for DOMPurify-sanitized assistant markdown output
+function AssistantMessage({ html }: { html: string }) {
+  return <div className="chat-markdown" ref={(el) => { if (el) el.innerHTML = html; }} />;
 }
