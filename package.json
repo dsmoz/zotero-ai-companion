@@ -1,7 +1,7 @@
 {
   "name": "zotero-ai-companion",
-  "version": "0.1.1",
-  "description": "AI research companion for Zotero 7 — chat, semantic search, similarity graph, discovery",
+  "version": "0.1.7",
+  "description": "AI research companion for Zotero 7 \u2014 chat, semantic search, similarity graph, discovery",
   "private": true,
   "scripts": {
     "build": "node scripts/build.mjs",
