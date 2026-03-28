@@ -1,24 +1,38 @@
 // src/ui/DiscoveryPanel.tsx
 import React, { useState } from 'react';
 import { Plus, Check } from '@phosphor-icons/react';
-import { SectionHeader } from './components/SectionHeader';
 import { StripedList } from './components/StripedList';
 import { discoverySearch, DiscoveryResult } from '../api/discovery';
+import { getDiscoverySources } from '../prefs';
 
 interface Props { seedQuery?: string; seedAuthor?: string; }
+
+const SOURCE_COLORS: Record<string, string> = {
+  pubmed:           '#f38ba8',
+  semantic_scholar: '#89b4fa',
+  openalex:         '#a6e3a1',
+};
+
+function sourceColor(id: string) {
+  return SOURCE_COLORS[id] ?? '#cba6f7';
+}
 
 export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
   const [query, setQuery] = useState(seedQuery || seedAuthor);
   const [results, setResults] = useState<DiscoveryResult[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
-  const [activeSource, setActiveSource] = useState<'pubmed' | 'semantic_scholar' | 'openalex'>('pubmed');
+  // null = All, otherwise a single source id
+  const [activeSource, setActiveSource] = useState<string | null>(null);
+
+  const enabledSources = getDiscoverySources().filter(s => s.enabled);
 
   async function search() {
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const r = await discoverySearch(query, [activeSource]);
+      const sources = activeSource ? [activeSource] : enabledSources.map(s => s.id);
+      const r = await discoverySearch(query, sources);
       setResults(r);
       setSelected(new Set());
     } finally {
@@ -34,44 +48,75 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
     });
   }
 
-  const sourceTab = (src: typeof activeSource, label: string) => (
-    <button onClick={() => setActiveSource(src)} style={{
-      padding: '3px 8px', fontSize: '0.7rem', background: 'transparent', border: 'none',
-      borderBottom: activeSource === src ? '2px solid var(--accent, #89b4fa)' : '2px solid transparent',
-      color: activeSource === src ? 'var(--accent, #89b4fa)' : '#6c7086', cursor: 'pointer',
-    }}>{label}</button>
-  );
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontSize: '0.8rem' }}>
-      <div style={{ display: 'flex', borderBottom: '1px solid #313244' }}>
-        {sourceTab('pubmed', 'PubMed')}
-        {sourceTab('semantic_scholar', 'Semantic Scholar')}
-        {sourceTab('openalex', 'OpenAlex')}
+
+      {/* Source selector */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 8px', borderBottom: '1px solid var(--color-border, #313244)', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => setActiveSource(null)}
+          style={{
+            padding: '2px 10px', fontSize: '0.65rem', borderRadius: 99,
+            border: activeSource === null ? '1px solid var(--accent, #89b4fa)' : '1px solid #444',
+            background: activeSource === null ? 'color-mix(in srgb, var(--accent, #89b4fa) 15%, transparent)' : 'transparent',
+            color: activeSource === null ? 'var(--accent, #89b4fa)' : '#6c7086',
+            cursor: 'pointer',
+          }}
+        >All</button>
+        {enabledSources.map(src => (
+          <button
+            key={src.id}
+            onClick={() => setActiveSource(activeSource === src.id ? null : src.id)}
+            style={{
+              padding: '2px 10px', fontSize: '0.65rem', borderRadius: 99,
+              border: activeSource === src.id ? `1px solid ${sourceColor(src.id)}` : '1px solid #444',
+              background: activeSource === src.id ? `color-mix(in srgb, ${sourceColor(src.id)} 15%, transparent)` : 'transparent',
+              color: activeSource === src.id ? sourceColor(src.id) : '#6c7086',
+              cursor: 'pointer',
+            }}
+          >{src.label}</button>
+        ))}
+        {enabledSources.length === 0 && (
+          <span style={{ fontSize: '0.65rem', color: '#f38ba8' }}>No sources enabled — configure in Settings</span>
+        )}
       </div>
-      <div style={{ padding: '6px 8px', display: 'flex', gap: 6, borderBottom: '1px solid #313244' }}>
-        <input value={query} onChange={e => setQuery(e.target.value)}
+
+      {/* Search bar */}
+      <div style={{ padding: '6px 8px', display: 'flex', gap: 6, borderBottom: '1px solid var(--color-border, #313244)' }}>
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && search()}
-          style={{ flex: 1, fontSize: '0.75rem', padding: '4px 8px', background: '#313244', border: '1px solid #444', borderRadius: 4, color: '#cdd6f4' }} />
-        <button onClick={search} style={{
-          background: 'var(--accent, #89b4fa)', border: 'none', borderRadius: 4,
-          padding: '4px 8px', cursor: 'pointer', color: '#1e1e2e', fontSize: '0.75rem',
-        }}>Search</button>
+          placeholder="Search papers..."
+          style={{ flex: 1, fontSize: '0.75rem', padding: '4px 8px', background: '#313244', border: '1px solid #444', borderRadius: 4, color: '#cdd6f4' }}
+        />
+        <button
+          onClick={search}
+          disabled={loading || enabledSources.length === 0}
+          style={{ background: 'var(--accent, #89b4fa)', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', color: '#1e1e2e', fontSize: '0.75rem', opacity: loading ? 0.6 : 1 }}
+        >{loading ? '...' : 'Search'}</button>
       </div>
+
+      {/* Results */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
         {loading && <div style={{ color: '#6c7086', textAlign: 'center', padding: '1rem' }}>Searching...</div>}
         {!loading && (
-          <StripedList emptyMessage={results.length === 0 && !loading ? 'No results' : ''}>
+          <StripedList emptyMessage="No results">
             {results.map((r, i) => (
               <div key={i} onClick={() => toggleSelect(i)} style={{
                 padding: '6px 8px', cursor: 'pointer',
-                borderLeft: selected.has(i) ? '3px solid var(--accent, #89b4fa)' : '3px solid transparent',
+                borderLeft: selected.has(i) ? '3px solid var(--accent, #89b4fa)' : `3px solid ${sourceColor(r.source)}`,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, marginRight: 8 }}>
                     <div style={{ color: '#cdd6f4', marginBottom: 2 }}>{r.title}</div>
                     <div style={{ color: '#6c7086', fontSize: '0.65rem' }}>
-                      {r.authors.slice(0, 3).join(', ')}{r.authors.length > 3 ? ' et al.' : ''} · {r.journal} · {r.year}
+                      {r.authors.slice(0, 3).join(', ')}{r.authors.length > 3 ? ' et al.' : ''}{r.journal ? ` · ${r.journal}` : ''}{r.year ? ` · ${r.year}` : ''}
+                    </div>
+                    <div style={{ marginTop: 2 }}>
+                      <span style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: 99, background: `color-mix(in srgb, ${sourceColor(r.source)} 15%, transparent)`, color: sourceColor(r.source) }}>
+                        {r.source.replace('_', ' ')}
+                      </span>
                     </div>
                   </div>
                   {selected.has(i)
@@ -84,14 +129,13 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
           </StripedList>
         )}
       </div>
+
+      {/* Import footer */}
       {selected.size > 0 && (
-        <div style={{ padding: '6px 8px', borderTop: '1px solid #313244', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '6px 8px', borderTop: '1px solid var(--color-border, #313244)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ color: '#6c7086', fontSize: '0.7rem' }}>{selected.size} selected</span>
-          <button style={{
-            background: 'var(--accent, #89b4fa)', border: 'none', borderRadius: 4,
-            padding: '4px 10px', fontSize: '0.75rem', cursor: 'pointer', color: '#1e1e2e',
-          }}>
-            Import selected to Zotero
+          <button style={{ background: 'var(--accent, #89b4fa)', border: 'none', borderRadius: 4, padding: '4px 10px', fontSize: '0.75rem', cursor: 'pointer', color: '#1e1e2e' }}>
+            Import to Zotero
           </button>
         </div>
       )}

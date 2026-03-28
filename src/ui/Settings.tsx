@@ -10,7 +10,8 @@ import { triggerSync } from '../api/sync';
 import {
   getApiUrl, setApiUrl, getSyncInterval, setSyncInterval,
   getTheme, setTheme, getAutoSync, getChatModel, getChatMaxChunks,
-  getSyncOnStartup, getDiscoverySources, getHealthPageSize, setPref,
+  getSyncOnStartup, getDiscoverySources, setDiscoverySources,
+  getHealthPageSize, setPref, DiscoverySource,
 } from '../prefs';
 
 type ConnectionStatus = 'connected' | 'degraded' | 'offline';
@@ -25,7 +26,9 @@ export function Settings() {
   const [theme, setThemeState] = useState(getTheme());
   const [chatModel, setChatModelState] = useState(getChatModel());
   const [chatMaxChunks, setChatMaxChunksState] = useState(getChatMaxChunks());
-  const [sources, setSourcesState] = useState(getDiscoverySources());
+  const [sources, setSourcesState] = useState<DiscoverySource[]>(getDiscoverySources());
+  const [newSourceId, setNewSourceId] = useState('');
+  const [newSourceLabel, setNewSourceLabel] = useState('');
   const [healthPageSize, setHealthPageSizeState] = useState(getHealthPageSize());
   const [confirmAction, setConfirmAction] = useState<null | 'reindex' | 'clear'>(null);
   const [syncing, setSyncing] = useState(false);
@@ -115,17 +118,54 @@ export function Settings() {
 
       <section style={{ borderBottom: '1px solid #313244', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
         <SectionHeader>DISCOVERY SOURCES</SectionHeader>
-        {(['pubmed', 'semantic_scholar', 'openalex'] as const).map(src => (
-          row(
-            { pubmed: 'PubMed / NCBI', semantic_scholar: 'Semantic Scholar', openalex: 'OpenAlex' }[src],
-            <Toggle key={src} checked={sources[src]} onChange={v => {
-              const next = { ...sources, [src]: v };
-              setSourcesState(next);
-              const prefKey = `discovery${src === 'pubmed' ? 'Pubmed' : src === 'semantic_scholar' ? 'SemanticScholar' : 'OpenAlex'}` as any;
-              setPref(prefKey, v);
-            }} />
-          )
+        {sources.map((src, idx) => (
+          <div key={src.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+            <span style={{ color: 'var(--text, #cdd6f4)', fontSize: '0.8rem' }}>{src.label}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Toggle checked={src.enabled} onChange={v => {
+                const next = sources.map((s, i) => i === idx ? { ...s, enabled: v } : s);
+                setSourcesState(next);
+                setDiscoverySources(next);
+              }} />
+              <button
+                onClick={() => {
+                  const next = sources.filter((_, i) => i !== idx);
+                  setSourcesState(next);
+                  setDiscoverySources(next);
+                }}
+                style={{ background: 'transparent', border: 'none', color: '#f38ba8', fontSize: '0.7rem', cursor: 'pointer', padding: '0 2px' }}
+                title="Remove source"
+              >✕</button>
+            </div>
+          </div>
         ))}
+        <div style={{ display: 'flex', gap: 4, marginTop: '0.5rem' }}>
+          <input
+            value={newSourceId}
+            onChange={e => setNewSourceId(e.target.value)}
+            placeholder="source_id"
+            style={{ width: 90, fontSize: '0.7rem', padding: '3px 6px', background: '#313244', border: '1px solid #444', borderRadius: 4, color: '#cdd6f4' }}
+          />
+          <input
+            value={newSourceLabel}
+            onChange={e => setNewSourceLabel(e.target.value)}
+            placeholder="Label"
+            style={{ flex: 1, fontSize: '0.7rem', padding: '3px 6px', background: '#313244', border: '1px solid #444', borderRadius: 4, color: '#cdd6f4' }}
+          />
+          <button
+            onClick={() => {
+              const id = newSourceId.trim().toLowerCase().replace(/\s+/g, '_');
+              const label = newSourceLabel.trim();
+              if (!id || !label || sources.some(s => s.id === id)) return;
+              const next = [...sources, { id, label, enabled: true }];
+              setSourcesState(next);
+              setDiscoverySources(next);
+              setNewSourceId('');
+              setNewSourceLabel('');
+            }}
+            style={{ fontSize: '0.7rem', padding: '3px 8px', background: '#313244', border: '1px solid #444', borderRadius: 4, color: '#cdd6f4', cursor: 'pointer' }}
+          >Add</button>
+        </div>
       </section>
 
       <section style={{ borderBottom: '1px solid #313244', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>

@@ -12,11 +12,14 @@ const DEFAULTS = {
   chatModel: 'google/gemma-2-9b-it',
   chatMaxChunks: 8,
   chatStream: true,
-  discoveryPubmed: true,
-  discoverySemanticScholar: true,
-  discoveryOpenAlex: false,
   autoCascadeDelete: false,
   healthPageSize: 10,
+  // Discovery sources stored as JSON string: [{id, label, enabled}]
+  discoverySources: JSON.stringify([
+    { id: 'pubmed',           label: 'PubMed',           enabled: true  },
+    { id: 'semantic_scholar', label: 'Semantic Scholar',  enabled: true  },
+    { id: 'openalex',        label: 'OpenAlex',          enabled: false },
+  ]),
 } as const;
 
 type PrefKey = keyof typeof DEFAULTS;
@@ -46,9 +49,28 @@ export const getSyncOnStartup = () => get('syncOnStartup') as boolean;
 export const getAutoSync = () => get('autoSync') as boolean;
 export const getAutoCascadeDelete = () => get('autoCascadeDelete') as boolean;
 export const getHealthPageSize = () => get('healthPageSize') as number;
-export const getDiscoverySources = () => ({
-  pubmed: get('discoveryPubmed') as boolean,
-  semantic_scholar: get('discoverySemanticScholar') as boolean,
-  openalex: get('discoveryOpenAlex') as boolean,
-});
+
+export interface DiscoverySource {
+  id: string;
+  label: string;
+  enabled: boolean;
+}
+
+export function getDiscoverySources(): DiscoverySource[] {
+  try {
+    const raw = get('discoverySources') as string;
+    return JSON.parse(raw) as DiscoverySource[];
+  } catch {
+    return [
+      { id: 'pubmed',           label: 'PubMed',          enabled: true  },
+      { id: 'semantic_scholar', label: 'Semantic Scholar', enabled: true  },
+      { id: 'openalex',        label: 'OpenAlex',         enabled: false },
+    ];
+  }
+}
+
+export function setDiscoverySources(sources: DiscoverySource[]): void {
+  set('discoverySources', JSON.stringify(sources) as any);
+}
+
 export { set as setPref, get as getPref };

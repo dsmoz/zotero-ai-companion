@@ -8,22 +8,22 @@ export interface DiscoveryResult {
   journal: string;
   year: string;
   doi: string;
-  source: 'pubmed' | 'semantic_scholar' | 'openalex';
+  source: string;
   pmid?: string;
   s2_id?: string;
 }
 
 export async function discoverySearch(
   query: string,
-  sourcesOverride?: string[]
+  sources?: string[],  // explicit list; falls back to all enabled prefs
 ): Promise<DiscoveryResult[]> {
-  const prefs = getDiscoverySources();
-  const sources = sourcesOverride ?? Object.entries(prefs)
-    .filter(([, enabled]) => enabled)
-    .map(([key]) => key);
+  const activeSources = sources ?? getDiscoverySources()
+    .filter(s => s.enabled)
+    .map(s => s.id);
+  if (activeSources.length === 0) return [];
   const params = new URLSearchParams({
     q: query,
-    sources: sources.join(','),
+    sources: activeSources.join(','),
     limit: '10',
   });
   const data = await apiFetch<{ results: DiscoveryResult[] }>(`/discovery/search?${params}`);
