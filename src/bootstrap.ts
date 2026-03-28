@@ -4,9 +4,6 @@ import { registerMenus, registerContextMenu } from './menu';
 import { getSyncOnStartup, getAutoSync, getSyncInterval } from './prefs';
 import { triggerSync } from './api/sync';
 import { apiFetch } from './api/client';
-import { createElement } from 'react';
-import { createRoot } from 'react-dom/client';
-import { ItemPaneTab } from './ui/ItemPaneTab';
 
 let syncTimer: ReturnType<typeof setInterval> | null = null;
 const windowListeners = new Map<Window, EventListener>();
@@ -36,26 +33,23 @@ async function startup({ rootURI }: { id: string; version: string; rootURI: stri
           l10nID: 'ai-companion-sidenav',
           icon: `${_rootURI}content/icons/icon20.png`,
         },
-        onInit: ({ body }: { body: HTMLElement }) => {
-          body.style.cssText = 'height:100%;min-height:300px;overflow:hidden;';
-        },
         onRender: ({ body, item }: { body: HTMLElement; item: any }) => {
-          const authors = item.getCreators()
-            .map((c: any) => ({ firstName: c.firstName || '', lastName: c.lastName || '' }));
-          if (!(body as any)._aiRoot) {
-            (body as any)._aiRoot = createRoot(body);
+          const key = item.key;
+          const title = encodeURIComponent(item.getField('title') ?? '');
+          const src = `chrome://zotero-ai-companion/content/panel.html?panel=item-chat&key=${key}&title=${title}`;
+          if ((body as any)._aiIframe?.src === src) return;
+          body.style.cssText = 'height:100%;min-height:300px;overflow:hidden;padding:0;';
+          let iframe = (body as any)._aiIframe as HTMLIFrameElement | undefined;
+          if (!iframe) {
+            iframe = body.ownerDocument.createElement('iframe') as HTMLIFrameElement;
+            iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+            body.replaceChildren(iframe);
+            (body as any)._aiIframe = iframe;
           }
-          (body as any)._aiRoot.render(createElement(ItemPaneTab, {
-            zoteroKey: item.key,
-            title: item.getField('title'),
-            authors,
-          }));
+          iframe.src = src;
         },
         onDestroy: ({ body }: { body: HTMLElement }) => {
-          if ((body as any)._aiRoot) {
-            (body as any)._aiRoot.unmount();
-            delete (body as any)._aiRoot;
-          }
+          delete (body as any)._aiIframe;
         },
       });
     } catch(e) { (Zotero as any).logError(e); }
