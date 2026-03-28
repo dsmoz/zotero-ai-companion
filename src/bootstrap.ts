@@ -128,7 +128,13 @@ async function handleCommand(command: string, win: Window) {
       const winId = `zotero-ai-${command}`;
 
       // If window already open, focus it
-      const existing = (Services as any).wm.getWindowByName(winId, null);
+      const wm = (Services as any).wm;
+      const enumerator = wm.getEnumerator('');
+      let existing = null;
+      while (enumerator.hasMoreElements()) {
+        const w = enumerator.getNext();
+        if (w.name === winId) { existing = w; break; }
+      }
       if (existing) { existing.focus(); break; }
 
       try {
