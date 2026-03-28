@@ -152,14 +152,13 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
       const { importToZotero } = await import('../api/import');
       const outcomes = await importToZotero(toImport, activeCollection?.id);
       const failed = outcomes.filter(o => !o.success);
-      if (failed.length === 0) {
-        window.alert(`Imported ${outcomes.length} item(s) to Zotero.`);
-      } else {
-        window.alert(
-          `Imported ${outcomes.length - failed.length} item(s).\n` +
-          `Failed: ${failed.map(f => f.title).join(', ')}`
-        );
-      }
+      const dupes = outcomes.filter(o => o.success && o.duplicate);
+      const added = outcomes.filter(o => o.success && !o.duplicate);
+      const parts: string[] = [];
+      if (added.length)  parts.push(`Imported ${added.length} item(s).`);
+      if (dupes.length)  parts.push(`${dupes.length} already in library${dupes.every(d => !d.duplicate) ? '' : ' (added to collection where missing)'}.`);
+      if (failed.length) parts.push(`Failed: ${failed.map(f => f.title).join(', ')}`);
+      window.alert(parts.join('\n') || 'Nothing to import.');
       setSelected(new Set());
     } catch (e: any) {
       window.alert(`Import failed: ${e.message}`);

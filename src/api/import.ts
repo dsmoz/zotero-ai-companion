@@ -4,6 +4,7 @@ import { DiscoveryResult } from './discovery';
 export interface ImportResult {
   title: string;
   success: boolean;
+  duplicate?: boolean;   // item already existed in library
   error?: string;
 }
 
@@ -19,6 +20,15 @@ async function findItemByIdentifier(Z: any, identifier: string): Promise<any | n
     if (identifier.startsWith('PMID:')) return (it.getField('extra') || '').includes(`PMID: ${value}`);
     return false;
   }) ?? null;
+}
+
+async function findItemByUrl(Z: any, url: string): Promise<any | null> {
+  const items = await Z.Items.getAll(Z.Libraries.userLibraryID, true);
+  return items.find((it: any) => it.getField('url') === url) ?? null;
+}
+
+function itemInCollection(item: any, collectionID: number): boolean {
+  return (item.getCollections() as number[]).includes(collectionID);
 }
 
 async function addItemToCollection(Z: any, itemID: number, collectionID: number): Promise<void> {
@@ -42,18 +52,38 @@ export async function importToZotero(
       const identifier = cleanDoi ? `DOI:${cleanDoi}` : r.pmid ? `PMID:${r.pmid}` : null;
 
       if (identifier) {
+        // Check if already in library
+        const existing = await findItemByIdentifier(Z, identifier);
+        if (existing) {
+          // Already in library — just add to collection if needed
+          if (collectionID && !itemInCollection(existing, collectionID)) {
+            await addItemToCollection(Z, existing.id, collectionID);
+          }
+          out.push({ title: r.title, success: true, duplicate: true });
+          continue;
+        }
         await Z.Utilities.lookupIdentifier(identifier);
         if (collectionID) {
           const saved = await findItemByIdentifier(Z, identifier);
           if (saved) await addItemToCollection(Z, saved.id, collectionID);
         }
+
       } else if (r.url) {
+        const existing = await findItemByUrl(Z, r.url);
+        if (existing) {
+          if (collectionID && !itemInCollection(existing, collectionID)) {
+            await addItemToCollection(Z, existing.id, collectionID);
+          }
+          out.push({ title: r.title, success: true, duplicate: true });
+          continue;
+        }
         const item = new Z.Item('webpage');
         item.setField('title', r.title);
         item.setField('url', r.url);
         if (r.snippet) item.setField('abstractNote', r.snippet);
         await item.saveTx();
         if (collectionID) await addItemToCollection(Z, item.id, collectionID);
+
       } else {
         const item = new Z.Item('journalArticle');
         item.setField('title', r.title);
@@ -65,6 +95,7 @@ export async function importToZotero(
         await item.saveTx();
         if (collectionID) await addItemToCollection(Z, item.id, collectionID);
       }
+
       out.push({ title: r.title, success: true });
     } catch (e: any) {
       out.push({ title: r.title, success: false, error: e.message });
