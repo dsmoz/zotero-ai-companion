@@ -1,7 +1,7 @@
 // src/bootstrap.ts
 import { registerEventHooks, unregisterEventHooks } from './events';
 import { registerMenus, registerContextMenu } from './menu';
-import { getSyncOnStartup, getAutoSync, getSyncInterval } from './prefs';
+import { getSyncOnStartup, getAutoSync, getSyncInterval, getItemPaneHeight } from './prefs';
 import { triggerSync } from './api/sync';
 import { apiFetch } from './api/client';
 
@@ -38,7 +38,8 @@ async function startup({ rootURI }: { id: string; version: string; rootURI: stri
           const title = encodeURIComponent(item.getField('title') ?? '');
           const src = `chrome://zotero-ai-companion/content/panel.html?panel=item-chat&key=${key}&title=${title}`;
           if ((body as any)._aiIframe?.src === src) return;
-          body.style.cssText = 'height:100%;min-height:300px;overflow:hidden;padding:0;';
+          const minH = getItemPaneHeight();
+          body.style.cssText = `height:100%;min-height:${minH}px;overflow:hidden;padding:0;`;
           let iframe = (body as any)._aiIframe as HTMLIFrameElement | undefined;
           if (!iframe) {
             iframe = body.ownerDocument.createElement('iframe') as HTMLIFrameElement;

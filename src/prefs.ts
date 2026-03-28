@@ -18,6 +18,7 @@ const DEFAULTS = {
   discoverySemanticScholar: true,
   discoveryOpenAlex: false,
   autoCascadeDelete: false,
+  itemPaneHeight: 450,
 } as const;
 
 type PrefKey = keyof typeof DEFAULTS;
@@ -56,6 +57,8 @@ export const getChatStream = () => get('chatStream') as boolean;
 export const getSyncOnStartup = () => get('syncOnStartup') as boolean;
 export const getAutoSync = () => get('autoSync') as boolean;
 export const getAutoCascadeDelete = () => get('autoCascadeDelete') as boolean;
+export const getItemPaneHeight = () => get('itemPaneHeight') as number;
+export const setItemPaneHeight = (v: number) => set('itemPaneHeight', v as typeof DEFAULTS['itemPaneHeight']);
 export const getDiscoverySources = () => ({
   pubmed: get('discoveryPubmed') as boolean,
   semantic_scholar: get('discoverySemanticScholar') as boolean,

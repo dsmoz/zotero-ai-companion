@@ -1,7 +1,7 @@
 // src/ui/ItemPaneTab.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { PaperPlaneTilt, MagnifyingGlass, User, Chat } from '@phosphor-icons/react';
-import { streamChat } from '../api/chat';
+import { streamChat, fetchItemMetadata } from '../api/chat';
 import type { Source } from '../api/chat';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -31,7 +31,7 @@ interface Props {
   authors: Array<{ firstName: string; lastName: string }>;
 }
 
-export function ItemPaneTab({ zoteroKey, title, authors }: Props) {
+export function ItemPaneTab({ zoteroKey, title, authors: initialAuthors }: Props) {
   const [tab, setTab] = useState<SubTab>('chat');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -39,8 +39,17 @@ export function ItemPaneTab({ zoteroKey, title, authors }: Props) {
   const [similar, setSimilar] = useState<SearchResult[]>([]);
   const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(null);
   const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
+  const [authors, setAuthors] = useState<Array<{ firstName: string; lastName: string }>>(initialAuthors);
   const bottomRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (initialAuthors.length === 0) {
+      fetchItemMetadata(zoteroKey).then(meta => {
+        if (meta?.creators?.length) setAuthors(meta.creators);
+      });
+    }
+  }, [zoteroKey]);
 
   useEffect(() => {
     if (tab === 'similar') loadSimilar();

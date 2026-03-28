@@ -43,6 +43,38 @@ export interface ChatToken {
   error?: string;
 }
 
+export interface ItemMetadata {
+  key: string;
+  title: string;
+  creators: Array<{ firstName: string; lastName: string }>;
+  date: string;
+  item_type: string;
+}
+
+export async function fetchItemMetadata(zoteroKey: string): Promise<ItemMetadata | null> {
+  const base = getApiUrl();
+  try {
+    const resp = await fetch(`${base}/api/plugin/chat/multi/metadata`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys: [zoteroKey] }),
+    });
+    if (!resp.ok) return null;
+    const data: Array<{ key: string; title: string; creators: any[]; date: string; item_type: string }> = await resp.json();
+    if (!data.length) return null;
+    const item = data[0];
+    // creators may be strings or {firstName, lastName} dicts
+    const creators = (item.creators ?? []).map((c: any) => {
+      if (typeof c === 'string') {
+        const parts = c.split(' ');
+        return { firstName: parts.slice(0, -1).join(' '), lastName: parts[parts.length - 1] ?? '' };
+      }
+      return { firstName: c.firstName ?? '', lastName: c.lastName ?? c.name ?? '' };
+    });
+    return { key: item.key, title: item.title, creators, date: item.date, item_type: item.item_type };
+  } catch { return null; }
+}
+
 export function streamChat(
   zoteroKey: string,
   question: string,

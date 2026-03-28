@@ -12,6 +12,7 @@ import {
   getTheme, setTheme, getAutoSync, getChatModel, getChatMaxChunks, getChatRelatedMax,
   getSyncOnStartup, getDiscoverySources, setPref,
   getChatRelatedMinLabel, setChatRelatedMinLabel,
+  getItemPaneHeight, setItemPaneHeight,
 } from '../prefs';
 
 type ConnectionStatus = 'connected' | 'degraded' | 'offline';
@@ -28,6 +29,7 @@ export function Settings() {
   const [chatMaxChunks, setChatMaxChunksState] = useState(getChatMaxChunks());
   const [chatRelatedMax, setChatRelatedMaxState] = useState(getChatRelatedMax());
   const [chatRelatedMinLabel, setChatRelatedMinLabelState] = useState(getChatRelatedMinLabel());
+  const [itemPaneHeight, setItemPaneHeightState] = useState(getItemPaneHeight());
   const [sources, setSourcesState] = useState(getDiscoverySources());
   const [confirmAction, setConfirmAction] = useState<null | 'reindex' | 'clear'>(null);
   const [syncing, setSyncing] = useState(false);
@@ -118,6 +120,9 @@ export function Settings() {
         }))}
         {row('Minimum match', segmented(['Fair', 'Good', 'Best'], chatRelatedMinLabel, v => {
           setChatRelatedMinLabelState(v); setChatRelatedMinLabel(v);
+        }))}
+        {row('Item pane height', segmented(['300', '450', '600', '800'], String(itemPaneHeight), v => {
+          const n = parseInt(v); setItemPaneHeightState(n); setItemPaneHeight(n);
         }))}
       </section>
 
