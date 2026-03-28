@@ -1,5 +1,6 @@
 // src/ui/HealthPanel.tsx
 import React, { useState, useEffect } from 'react';
+import { FileText } from '@phosphor-icons/react';
 import { SectionHeader } from './components/SectionHeader';
 import { fetchLibraryHealth, indexAllPending, fixOrphans, invalidateHealthCache, LibraryHealth } from '../api/health';
 import { getHealthPageSize } from '../prefs';
@@ -112,6 +113,8 @@ export function HealthPanel() {
                 borderRadius: 4, padding: '6px 8px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                  <FileText size={14} color="#6c7086" style={{ marginTop: 2, flexShrink: 0 }} />
                 <div>
                   <div style={{ color: '#cdd6f4' }}>{issue.title}</div>
                   <div style={{ color: ISSUE_COLORS[issue.issue_type], fontSize: '0.65rem' }}>
@@ -123,6 +126,7 @@ export function HealthPanel() {
                       {new Date(issue.updated_at).toLocaleDateString()}
                     </div>
                   )}
+                </div>
                 </div>
                 <span style={{ color: 'var(--accent, #89b4fa)', fontSize: '0.7rem', cursor: 'pointer' }}>
                   {ISSUE_ACTIONS[issue.issue_type]}
