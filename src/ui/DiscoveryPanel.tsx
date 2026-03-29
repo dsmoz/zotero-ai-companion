@@ -569,7 +569,7 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
 
           {/* Count + import row */}
           <div style={{ padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: '#585b70', fontSize: '0.65rem', flex: 1 }}>
+            <span style={{ color: '#a6adc8', fontSize: '0.65rem', flex: 1 }}>
               {importMsg
                 ? <span style={{ color: '#a6e3a1' }}>{importMsg}</span>
                 : <>{pageOffset + 1}–{Math.min(pageOffset + pageSize, results.length)} of {results.length}{selected.size > 0 && ` · ${selected.size} selected`}</>
