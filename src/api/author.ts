@@ -1,5 +1,7 @@
 // src/api/author.ts
 import { apiFetch } from './client';
+import { TTLCache } from './apiCache';
+import { getTtlMs } from '../prefs';
 
 export interface AuthorProfile {
   author: string;
@@ -7,6 +9,12 @@ export interface AuthorProfile {
   coauthors: string[];
 }
 
+const authorCache = new TTLCache<string, AuthorProfile>(() => getTtlMs());
+
 export async function fetchAuthorProfile(authorName: string): Promise<AuthorProfile> {
-  return apiFetch<AuthorProfile>(`/author/${encodeURIComponent(authorName)}`);
+  const cached = authorCache.get(authorName);
+  if (cached) return cached;
+  const result = await apiFetch<AuthorProfile>(`/author/${encodeURIComponent(authorName)}`);
+  authorCache.set(authorName, result);
+  return result;
 }
