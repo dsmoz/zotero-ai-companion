@@ -25,6 +25,7 @@ export interface DiscoveryResult {
   is_open_access?: boolean;
   oa_status?: string;
   score?: number;  // relevance score 0–1, present when score_mode is set
+  item_type?: string;  // 'webpage' | 'report' | 'videoRecording' — set by web sources
 }
 
 export interface DiscoveryFilters {

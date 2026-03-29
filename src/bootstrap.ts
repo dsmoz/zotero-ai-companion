@@ -318,9 +318,18 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
         doi.replace(/^https?:\/\/doi\.org\//i, '').replace(/^doi:\s*/i, '').trim();
 
       const saveManual = async (r: any, cleanDoi: string, colID: number | null) => {
-        const item = new (Zotero as any).Item('journalArticle');
+        const zoteroType = r.item_type === 'videoRecording' ? 'videoRecording'
+          : r.item_type === 'report' ? 'report'
+          : r.item_type === 'webpage' ? 'webpage'
+          : 'journalArticle';
+        const item = new (Zotero as any).Item(zoteroType);
         item.setField('title', r.title ?? '');
-        if (r.journal) item.setField('publicationTitle', r.journal);
+        if (r.journal) {
+          const journalField = zoteroType === 'webpage' ? 'websiteTitle'
+            : zoteroType === 'videoRecording' ? 'studio'
+            : 'publicationTitle';
+          try { item.setField(journalField, r.journal); } catch { /* field not supported */ }
+        }
         if (r.year)    item.setField('date', String(r.year));
         if (cleanDoi)  item.setField('DOI', cleanDoi);
         if (r.url)     item.setField('url', r.url);
