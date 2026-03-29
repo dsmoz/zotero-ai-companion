@@ -388,7 +388,7 @@ input:focus, textarea:focus {
 
 .source-entry {
   font-size: 0.62rem;
-  color: var(--color-text-muted);
+  color: var(--color-text);
   line-height: 1.4;
   margin-bottom: 0.2em;
 }
