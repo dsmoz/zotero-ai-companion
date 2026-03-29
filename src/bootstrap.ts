@@ -341,11 +341,21 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
       };
 
       // Detect the currently selected collection in Zotero
-      const zp = (Zotero as any).getActiveZoteroPane();
+      // Try getActiveZoteroPane first, fall back to iterating main windows
+      let zp = (Zotero as any).getActiveZoteroPane();
+      if (!zp) {
+        for (const mw of (Zotero as any).getMainWindows?.() ?? []) {
+          const candidate = mw.ZoteroPane ?? mw.Zotero?.getActiveZoteroPane?.();
+          if (candidate) { zp = candidate; break; }
+        }
+      }
       const activeCollection = zp?.getSelectedCollection() ?? null;
       const collectionID: number | null = activeCollection?.id ?? null;
+      const libraryID: number = activeCollection?.libraryID
+        ?? zp?.getSelectedLibraryID?.()
+        ?? (Zotero as any).Libraries.userLibraryID;
       console.log('[AI Import] starting import of', results.length, 'items');
-      console.log('[AI Import] ZoteroPane:', !!zp, '| collection:', collectionID, activeCollection?.name ?? 'none');
+      console.log('[AI Import] ZoteroPane:', !!zp, '| libraryID:', libraryID, '| collection:', collectionID, activeCollection?.name ?? 'none');
 
       for (const r of results) {
         try {
@@ -363,8 +373,8 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
               if (translators && translators.length > 0) {
                 translate.setTranslator(translators);
                 const savedItems = await translate.translate({
-                  libraryID: (Zotero as any).Libraries.userLibraryID,
-                  collections: collectionID ? [collectionID] : [],
+                  libraryID,
+                  collections: collectionID ? [collectionID] : false,
                   saveAttachments: true,
                 });
                 console.log('[AI Import] Translate.Search saved', savedItems?.length ?? 0, 'item(s) for', r.title?.slice(0, 50));
