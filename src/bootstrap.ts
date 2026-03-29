@@ -334,17 +334,35 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
         const abstract = (r.abstract || r.snippet || '').replace(/<[^>]+>/g, ' ').trim();
         if (abstract) item.setField('abstractNote', abstract);
         await item.saveTx();
+        return item;
       };
 
-      console.log('[AI Import] starting import of', results.length, 'items');
+      // Detect the currently selected collection in Zotero
+      const activeCollection = (Zotero as any).getActiveZoteroPane()?.getSelectedCollection?.() ?? null;
+      const collectionID: number | null = activeCollection?.id ?? null;
+      console.log('[AI Import] starting import of', results.length, 'items, collection:', collectionID ?? 'main library');
 
       for (const r of results) {
         try {
           const cleanDoi = r.doi ? normDoi(r.doi) : '';
           console.log('[AI Import] processing:', r.title?.slice(0, 50), '| DOI:', cleanDoi, '| PMID:', r.pmid);
-          await saveManual(r, cleanDoi);
+          const item = await saveManual(r, cleanDoi);
+
+          // Add to active collection if one is selected
+          if (collectionID && activeCollection) {
+            activeCollection.addItem(item.id);
+            await activeCollection.saveTx();
+          }
+
+          // Attach full text PDF via Zotero's OA resolver
+          try {
+            await (Zotero as any).Attachments.addAvailableFile(item);
+          } catch (pdfErr) {
+            console.warn('[AI Import] PDF attach failed for', r.title?.slice(0, 50), pdfErr);
+          }
+
           imported++;
-          console.log('[AI Import] saved manually:', r.title?.slice(0, 50));
+          console.log('[AI Import] saved:', r.title?.slice(0, 50));
         } catch (e) {
           console.error('[AI Import] failed for', r.title?.slice(0, 50), e);
           failed++;
