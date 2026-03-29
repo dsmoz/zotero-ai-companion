@@ -89,6 +89,10 @@ export const setDiscoveryTextColor = (v: string) => set('discoveryTextColor', v 
 
 const DISCOVERY_SOURCES_PREF = `${PREFIX}.discovery.sourcesEnabled`;
 const DISCOVERY_MIGRATED_PREF = `${PREFIX}.discovery.migrated`;
+// Bump this when default_enabled_in_plugin changes for any source so that
+// existing users get the new defaults applied on next Zotero start.
+const DISCOVERY_SOURCES_VERSION = 2;
+const DISCOVERY_SOURCES_VERSION_PREF = `${PREFIX}.discovery.sourcesVersion`;
 
 /** Shape stored in the JSON string pref. */
 export type SourcePrefs = Record<string, boolean>;
@@ -122,16 +126,32 @@ export function setSourcePref(key: string, enabled: boolean): void {
  * Call after fetching the server's /sources response.
  */
 export function initSourcePrefs(sources: SourceEntry[]): void {
+  const Z = (globalThis as any).Zotero;
   const current = getSourcePrefs();
   let changed = false;
+
+  // Version bump: re-apply defaults for any source where default changed to true
+  const storedVersion = (Z?.Prefs?.get(DISCOVERY_SOURCES_VERSION_PREF, true) as number | undefined) ?? 0;
+  if (storedVersion < DISCOVERY_SOURCES_VERSION) {
+    for (const source of sources) {
+      if (source.default_enabled_in_plugin && !current[source.key]) {
+        current[source.key] = true;
+        changed = true;
+      }
+    }
+    Z?.Prefs?.set(DISCOVERY_SOURCES_VERSION_PREF, DISCOVERY_SOURCES_VERSION, true);
+  }
+
+  // Seed defaults for any brand-new source not yet in prefs
   for (const source of sources) {
     if (!(source.key in current)) {
       current[source.key] = source.default_enabled_in_plugin;
       changed = true;
     }
   }
+
   if (changed) {
-    (globalThis as any).Zotero?.Prefs?.set(DISCOVERY_SOURCES_PREF, JSON.stringify(current), true);
+    Z?.Prefs?.set(DISCOVERY_SOURCES_PREF, JSON.stringify(current), true);
   }
 }
 
