@@ -352,11 +352,19 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
       }
 
       console.log('[AI Import] done — imported:', imported, 'failed:', failed);
-      const resultEvent = new (win as any).CustomEvent('zotero-ai-import-result', {
-        detail: { listenerId, imported, failed, duplicates },
-        bubbles: true,
-      });
-      win.dispatchEvent(resultEvent);
+      // Broadcast to all open windows — the panel may be in a dialog whose
+      // opener reference differs from `win` depending on how Zotero resolves it.
+      const enumeratorImp = (Services as any).wm.getEnumerator('');
+      while (enumeratorImp.hasMoreElements()) {
+        const w = enumeratorImp.getNext() as any;
+        try {
+          const evt = new w.CustomEvent('zotero-ai-import-result', {
+            detail: { listenerId, imported, failed, duplicates },
+            bubbles: true,
+          });
+          w.dispatchEvent(evt);
+        } catch { /* closed window */ }
+      }
       break;
     }
 
