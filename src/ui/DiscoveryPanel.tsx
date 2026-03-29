@@ -505,7 +505,7 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
                     {r.authors.slice(0, 3).join(', ')}{r.authors.length > 3 ? ' et al.' : ''}
                     {(r.journal || r.year) && ' · '}
                     {r.journal}{r.journal && r.year && ' · '}{r.year}
-                    {r.source && <span style={{ marginLeft: 4, color: 'var(--accent, #89b4fa)', opacity: 0.8 }}>[{r.source}]</span>}
+                    {r.source && <span style={{ marginLeft: 4, color: '#585b70', opacity: 0.8 }}>{r.source}</span>}
                   </div>
                   {r.doi && (
                     <div style={{ fontSize: fontSize * 0.78, color: textColor, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.7 }}>
