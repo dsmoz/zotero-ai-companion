@@ -21,6 +21,7 @@ export interface DiscoveryResult {
   s2_id?: string;
   url?: string;
   abstract?: string;
+  snippet?: string;
   is_open_access?: boolean;
   oa_status?: string;
   score?: number;  // relevance score 0–1, present when score_mode is set

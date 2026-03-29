@@ -12,6 +12,7 @@ interface Message { role: 'user' | 'assistant'; text: string; sources?: Source[]
 
 interface Props {
   zoteroKeys: string[];
+  initialAbstract?: string;
 }
 
 // All assistant text is sanitized with DOMPurify before rendering
