@@ -10,10 +10,16 @@ import { triggerSync } from '../api/sync';
 import {
   getApiUrl, setApiUrl, getSyncInterval, setSyncInterval,
   getTheme, setTheme, getAutoSync, getChatModel, getChatMaxChunks, getChatRelatedMax,
-  getSyncOnStartup, getDiscoverySources, setPref,
+  getSyncOnStartup, setPref,
   getChatRelatedMinLabel, setChatRelatedMinLabel,
   getItemPaneHeight, setItemPaneHeight,
+  getSourcePrefs, setSourcePref,
+  getDiscoveryScoreMode, setDiscoveryScoreMode,
+  getDiscoveryMinScore, setDiscoveryMinScore,
+  getDiscoveryTopK, setDiscoveryTopK,
+  getListPageSize, setListPageSize,
 } from '../prefs';
+import { fetchDiscoverySources, type SourceEntry } from '../api/discovery';
 
 type ConnectionStatus = 'connected' | 'degraded' | 'offline';
 
@@ -30,11 +36,19 @@ export function Settings() {
   const [chatRelatedMax, setChatRelatedMaxState] = useState(getChatRelatedMax());
   const [chatRelatedMinLabel, setChatRelatedMinLabelState] = useState(getChatRelatedMinLabel());
   const [itemPaneHeight, setItemPaneHeightState] = useState(getItemPaneHeight());
-  const [sources, setSourcesState] = useState(getDiscoverySources());
+  const [discoverySources, setDiscoverySources] = useState<SourceEntry[]>([]);
+  const [sourcePrefs, setSourcePrefs] = useState(getSourcePrefs());
+  const [scoreMode, setScoreModeState] = useState<'keyword' | 'semantic'>(getDiscoveryScoreMode());
+  const [minScore, setMinScoreState] = useState(getDiscoveryMinScore());
+  const [topK, setTopKState] = useState(getDiscoveryTopK());
+  const [listPageSize, setListPageSizeState] = useState(getListPageSize());
   const [confirmAction, setConfirmAction] = useState<null | 'reindex' | 'clear'>(null);
   const [syncing, setSyncing] = useState(false);
 
-  useEffect(() => { testConnection(); }, []);
+  useEffect(() => {
+    testConnection();
+    fetchDiscoverySources().then(setDiscoverySources).catch(() => {});
+  }, []);
 
   async function testConnection() {
     try {
@@ -52,10 +66,10 @@ export function Settings() {
     try { await triggerSync(); } finally { setSyncing(false); }
   }
 
-  const row = (label: string, control: React.ReactNode) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-      <span style={{ color: 'var(--text, #cdd6f4)', fontSize: '0.8rem' }}>{label}</span>
-      {control}
+  const row = (label: React.ReactNode, control: React.ReactNode) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+      <span style={{ color: 'var(--text, #cdd6f4)', fontSize: '0.8rem', flex: 1, marginRight: 8 }}>{label}</span>
+      <span style={{ flexShrink: 0 }}>{control}</span>
     </div>
   );
 
@@ -128,17 +142,57 @@ export function Settings() {
 
       <section style={{ borderBottom: '1px solid #313244', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
         <SectionHeader>DISCOVERY SOURCES</SectionHeader>
-        {(['pubmed', 'semantic_scholar', 'openalex'] as const).map(src => (
-          row(
-            { pubmed: 'PubMed / NCBI', semantic_scholar: 'Semantic Scholar', openalex: 'OpenAlex' }[src],
-            <Toggle key={src} checked={sources[src]} onChange={v => {
-              const next = { ...sources, [src]: v };
-              setSourcesState(next);
-              const prefKey = `discovery${src === 'pubmed' ? 'Pubmed' : src === 'semantic_scholar' ? 'SemanticScholar' : 'OpenAlex'}` as any;
-              setPref(prefKey, v);
-            }} />
-          )
-        ))}
+        {discoverySources.length === 0
+          ? <div style={{ color: '#6c7086', fontSize: '0.75rem' }}>Loading sources from server…</div>
+          : discoverySources.map(src => (
+              <div key={src.key} style={{ marginBottom: '0.5rem' }}>
+                {row(
+                  <span>
+                    <span style={{ color: 'var(--text, #cdd6f4)' }}>{src.label}</span>
+                    {!src.enabled && (
+                      <span style={{ marginLeft: 6, fontSize: '0.65rem', color: '#f38ba8' }}>disabled on server</span>
+                    )}
+                    <div style={{ fontSize: '0.65rem', color: '#585b70', marginTop: 1 }}>{src.description}</div>
+                  </span>,
+                  <Toggle
+                    checked={src.key in sourcePrefs ? sourcePrefs[src.key] : src.default_enabled_in_plugin}
+                    disabled={!src.enabled}
+                    onChange={v => {
+                      setSourcePref(src.key, v);
+                      setSourcePrefs(prev => ({ ...prev, [src.key]: v }));
+                    }}
+                  />
+                )}
+              </div>
+            ))
+        }
+      </section>
+
+      <section style={{ borderBottom: '1px solid #313244', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
+        <SectionHeader>DISCOVERY SCORING</SectionHeader>
+        {row('Score mode', segmented(['keyword', 'semantic'], scoreMode, v => {
+          const val = v as 'keyword' | 'semantic';
+          setScoreModeState(val);
+          setDiscoveryScoreMode(val);
+        }))}
+        {row('Min score', segmented(['0.0', '0.2', '0.3', '0.4', '0.5'], String(minScore), v => {
+          const n = parseFloat(v);
+          setMinScoreState(n);
+          setDiscoveryMinScore(n);
+        }))}
+        {row('Top results', segmented(['10', '15', '25', '50'], String(topK), v => {
+          const n = parseInt(v);
+          setTopKState(n);
+          setDiscoveryTopK(n);
+        }))}
+        {row('Page size', segmented(['5', '10', '20', '50'], String(listPageSize), v => {
+          const n = parseInt(v);
+          setListPageSizeState(n);
+          setListPageSize(n);
+        }))}
+        <div style={{ fontSize: '0.65rem', color: '#585b70', marginTop: '0.25rem' }}>
+          keyword: fast, no API cost · semantic: accurate, uses embedding model
+        </div>
       </section>
 
       <section>
