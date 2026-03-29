@@ -340,6 +340,13 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
             return { firstName: parts.join(' '), lastName, creatorType: 'author' };
           })
           .filter((c: any) => c.lastName.trim() !== '');
+        // Fallback: use domain as corporate author for web items with no authors
+        if (creators.length === 0 && r.url) {
+          try {
+            const host = new URL(r.url).hostname.replace(/^www\./, '');
+            if (host) creators.push({ firstName: '', lastName: host, creatorType: 'author' });
+          } catch { /* invalid URL, skip */ }
+        }
         if (creators.length) item.setCreators(creators);
         const abstract = (r.abstract || r.snippet || '').replace(/<[^>]+>/g, ' ').trim();
         if (abstract) item.setField('abstractNote', abstract);
@@ -353,11 +360,18 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
         // For web items, attach snapshot (webpage) or download PDF (report)
         if ((zoteroType === 'webpage' || zoteroType === 'report') && r.url) {
           try {
-            await (Zotero as any).Attachments.importFromURL({
+            const attachment = await (Zotero as any).Attachments.importFromURL({
               url: r.url,
               parentItemID: item.id,
               title: r.title ?? 'Attachment',
             });
+            if (attachment && zoteroType === 'report') {
+              try {
+                await attachment.renameAttachmentFile('PDF.pdf');
+              } catch (renameErr) {
+                console.warn('[AI Import] PDF rename failed:', renameErr);
+              }
+            }
             console.log('[AI Import] snapshot/PDF attached for', r.url?.slice(0, 60));
           } catch (snapErr) {
             console.warn('[AI Import] snapshot failed for', r.url?.slice(0, 60), snapErr);
