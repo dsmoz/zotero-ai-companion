@@ -324,13 +324,14 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
         if (r.year)    item.setField('date', String(r.year));
         if (cleanDoi)  item.setField('DOI', cleanDoi);
         if (r.url)     item.setField('url', r.url);
-        item.setCreators(
-          (r.authors ?? []).map((a: string) => {
+        const creators = (r.authors ?? [])
+          .map((a: string) => {
             const parts = a.trim().split(/\s+/);
-            const lastName = parts.pop() ?? a;
+            const lastName = parts.pop() ?? '';
             return { firstName: parts.join(' '), lastName, creatorType: 'author' };
           })
-        );
+          .filter((c: any) => c.lastName.trim() !== '');
+        if (creators.length) item.setCreators(creators);
         const abstract = (r.abstract || r.snippet || '').replace(/<[^>]+>/g, ' ').trim();
         if (abstract) item.setField('abstractNote', abstract);
         // Set collection before saving — this is the correct way in Zotero 7
