@@ -55,17 +55,28 @@ export async function importToZotero(
         // Check if already in library
         const existing = await findItemByIdentifier(Z, identifier);
         if (existing) {
-          // Already in library — just add to collection if needed
           if (collectionID && !itemInCollection(existing, collectionID)) {
             await addItemToCollection(Z, existing.id, collectionID);
           }
           out.push({ title: r.title, success: true, duplicate: true });
           continue;
         }
-        await Z.Utilities.lookupIdentifier(identifier);
-        if (collectionID) {
-          const saved = await findItemByIdentifier(Z, identifier);
-          if (saved) await addItemToCollection(Z, saved.id, collectionID);
+
+        // Use Zotero's Translate.Search to look up by DOI or PMID
+        const idObj: Record<string, string> = identifier.startsWith('DOI:')
+          ? { DOI: identifier.slice(4) }
+          : { PMID: identifier.slice(5) };
+        const translate = new Z.Translate.Search();
+        translate.setIdentifier(idObj);
+        const translators = await translate.getTranslators();
+        translate.setTranslator(translators);
+        const newItems: any[] = await translate.translate({ libraryID: Z.Libraries.userLibraryID });
+        if (collectionID && newItems?.length) {
+          for (const item of newItems) {
+            if (!item.isAttachment() && !item.isNote()) {
+              await addItemToCollection(Z, item.id, collectionID);
+            }
+          }
         }
 
       } else if (r.url) {
