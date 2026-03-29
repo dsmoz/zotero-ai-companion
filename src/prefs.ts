@@ -24,6 +24,7 @@ const DEFAULTS = {
   discoveryMinScore: 0.25,
   discoveryTopK: 25,
   listPageSize: 10,
+  cacheTtlMinutes: 30,
 } as const;
 
 type PrefKey = keyof typeof DEFAULTS;
@@ -72,6 +73,9 @@ export const getDiscoveryTopK = () => get('discoveryTopK') as number;
 export const setDiscoveryTopK = (v: number) => set('discoveryTopK', v as typeof DEFAULTS['discoveryTopK']);
 export const getListPageSize = () => get('listPageSize') as number;
 export const setListPageSize = (v: number) => set('listPageSize', v as typeof DEFAULTS['listPageSize']);
+export const getCacheTtlMinutes = () => get('cacheTtlMinutes') as number;
+export const setCacheTtlMinutes = (v: number) => set('cacheTtlMinutes', v as typeof DEFAULTS['cacheTtlMinutes']);
+export const getTtlMs = () => getCacheTtlMinutes() * 60 * 1000;
 // ── Dynamic discovery source preferences ─────────────────────────────────────
 // Source names are NOT hardcoded here. The available sources are fetched from
 // the server (GET /api/plugin/discovery/sources) and stored as a single JSON
