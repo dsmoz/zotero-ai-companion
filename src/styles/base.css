@@ -321,3 +321,80 @@ input:focus, textarea:focus {
 .badge--yellow { background: color-mix(in srgb, var(--accent-yellow) 15%, transparent); color: var(--accent-yellow); }
 .badge--red    { background: color-mix(in srgb, var(--accent-red) 15%, transparent); color: var(--accent-red); }
 .badge--blue   { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+
+/* ── Chat markdown rendering ── */
+.chat-markdown {
+  line-height: 1.55;
+}
+
+.chat-markdown p {
+  margin-bottom: 0.5em;
+}
+
+.chat-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+  padding-left: 1.25em;
+  margin-bottom: 0.5em;
+}
+
+.chat-markdown li {
+  margin-bottom: 0.2em;
+  padding-left: 0.15em;
+}
+
+.chat-markdown ul li::marker {
+  color: var(--accent);
+}
+
+.chat-markdown ol li::marker {
+  color: var(--accent);
+  font-weight: var(--font-medium);
+}
+
+.chat-markdown strong {
+  font-weight: var(--font-semibold);
+  color: var(--color-text);
+}
+
+/* Citation superscripts inline in assistant text */
+.citation-ref {
+  color: var(--accent);
+  font-size: 0.7em;
+  font-weight: var(--font-medium);
+  vertical-align: super;
+  line-height: 0;
+  cursor: default;
+}
+
+/* Sources list below assistant message */
+.sources-section {
+  margin-top: 0.75em;
+  padding-top: 0.6em;
+  border-top: 1px solid var(--color-border-subtle, #444);
+}
+
+.sources-section-label {
+  font-size: 0.6rem;
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--accent);
+  margin-bottom: 0.35em;
+}
+
+.source-entry {
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  margin-bottom: 0.2em;
+}
+
+.source-entry__num {
+  color: var(--accent);
+  font-weight: var(--font-medium);
+  margin-right: 0.2em;
+}

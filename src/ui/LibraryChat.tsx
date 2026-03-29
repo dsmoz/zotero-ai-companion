@@ -16,12 +16,12 @@ function renderMarkdown(text: string): string {
   return html.replace(/\[(\d+)\]/g, '<sup class="citation-ref">[$1]</sup>');
 }
 
-function formatApaSource(s: Source, index: number): string {
+function formatApaSourceText(s: Source): string {
   const parts: string[] = [];
   if (s.authors) parts.push(s.authors + '.');
   if (s.year) parts.push(`(${s.year}).`);
   if (s.title) parts.push(s.title + '.');
-  return `[${index + 1}] ${parts.join(' ')}`;
+  return parts.join(' ');
 }
 
 function generateSessionId(): string {
@@ -153,7 +153,10 @@ export function LibraryChat() {
                 <div className="sources-section">
                   <div className="sources-section-label">Sources</div>
                   {m.sources.map((s, si) => (
-                    <div key={si} className="source-entry">{formatApaSource(s, si)}</div>
+                    <div key={si} className="source-entry">
+                      <span className="source-entry__num">[{si + 1}]</span>
+                      {formatApaSourceText(s)}
+                    </div>
                   ))}
                 </div>
               )}
