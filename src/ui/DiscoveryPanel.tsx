@@ -1,6 +1,6 @@
 // src/ui/DiscoveryPanel.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Check, Funnel, X, CaretLeft, CaretRight, Clock, Trash, Article, FilePdf, Video, Globe } from '@phosphor-icons/react';
+import { Plus, Check, Funnel, X, CaretLeft, CaretRight, Clock, Trash, Article, FilePdf, FileDashed, Video, Globe } from '@phosphor-icons/react';
 import { SectionHeader } from './components/SectionHeader';
 import {
   discoverySearch,
@@ -47,19 +47,26 @@ const PUBLICATION_TYPES = [
   { value: 'evidence_gap_map', label: 'Evidence gap map' },
 ];
 
-/** Derive a display type from the result for icon + tooltip purposes. */
-function getItemDisplayType(r: DiscoveryResult): 'article' | 'pdf' | 'video' | 'webpage' {
+const ACADEMIC_SOURCES = new Set(['pubmed', 'semantic_scholar', 'openalex', 'europe_pmc', 'who_iris', 'reliefweb', '3ie', 'eldis']);
+
+/** Derive a display type from the result for icon purposes. */
+function getItemDisplayType(r: DiscoveryResult): 'article' | 'pdf' | 'video' | 'webpage' | 'unknown' {
   if (r.item_type === 'videoRecording') return 'video';
-  if (r.item_type === 'report') return 'pdf';
-  if (r.item_type === 'webpage') return 'webpage';
-  return 'article';
+  if (r.item_type === 'report')         return 'pdf';
+  if (r.item_type === 'webpage')        return 'webpage';
+  if (r.item_type === 'journalArticle') return 'article';
+  // No item_type set — infer from source
+  if (ACADEMIC_SOURCES.has(r.source))   return 'article';
+  return 'unknown';
 }
 
-function ItemTypeIcon({ type }: { type: 'article' | 'pdf' | 'video' | 'webpage' }) {
-  if (type === 'pdf')     return <FilePdf size={14} color="#f38ba8" style={{ flexShrink: 0, marginTop: 1 }} />;
-  if (type === 'video')   return <Video    size={14} color="#cba6f7" style={{ flexShrink: 0, marginTop: 1 }} />;
-  if (type === 'webpage') return <Globe    size={14} color="#89dceb" style={{ flexShrink: 0, marginTop: 1 }} />;
-  return                         <Article  size={14} color="#6c7086" style={{ flexShrink: 0, marginTop: 1 }} />;
+function ItemTypeIcon({ type }: { type: 'article' | 'pdf' | 'video' | 'webpage' | 'unknown' }) {
+  const s: React.CSSProperties = { flexShrink: 0, marginTop: 1 };
+  if (type === 'pdf')     return <FilePdf    size={14} color="#f38ba8" style={s} />;
+  if (type === 'video')   return <Video      size={14} color="#cba6f7" style={s} />;
+  if (type === 'webpage') return <Globe      size={14} color="#89dceb" style={s} />;
+  if (type === 'unknown') return <FileDashed size={14} color="#585b70" style={s} />;
+  return                         <Article    size={14} color="#6c7086" style={s} />;
 }
 
 function ScoreBadge({ score }: { score?: number }) {
