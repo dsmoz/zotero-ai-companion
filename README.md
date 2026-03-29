@@ -11,6 +11,8 @@ flowchart TD
     Flask --> Chat["Chat\nchat_llm · chat_sessions\nplugin_routes"]
     Flask --> Search["Search\nSemanticSearch · similar_items"]
     Flask --> Sync["Sync & Jobs\nsync · job_queue"]
+    Flask --> Discovery["Discovery\nsearch · history · Tavily"]
+    Discovery -.->|web search| Tavily(("Tavily API"))
     Chat -.->|stream| Anthropic(("Anthropic API\nHaiku / Sonnet"))
     Chat -.->|fallback| OpenRouter(("OpenRouter"))
     Chat -.->|fallback| LMStudio(("LM Studio"))
@@ -25,7 +27,7 @@ flowchart TD
 | Item Chat | Item pane → AI tab | Chat with a single document; history persists per item |
 | Library Chat | Tools → Library Chat | Cross-library semantic search + LLM; session history sidebar |
 | Multi-doc Chat | Right-click → Chat with documents | Chat across selected items; scope persists with session |
-| Discovery | Tools → Discovery | Semantic discovery across the full library |
+| Discovery | Tools → Discovery | Multi-source academic + web search; import to collection with PDF download |
 | Similarity Graph | Tools → Similarity Graph | Visual network of related items |
 | Library Health | Tools → Library Health | Indexing coverage and metadata quality |
 | Index Queue | Tools → Index Queue | Monitor background indexing jobs |
@@ -41,6 +43,7 @@ flowchart TD
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 0.5.0 | 2026-03-29 | Tavily web source, item-type icons, tag pills, PDF rename, domain author fallback |
 | 0.4.0 | 2026-03-29 | Author tab with abstracts/sort, Similar tab dedup, abstract context injection in chat |
 | 0.3.0 | 2026-03-28 | LLM chat (item/library/multi-doc), citations, context maintenance, related docs |
 | 0.2.1 | 2026-03-28 | Restore CSS design tokens lost in rebase |

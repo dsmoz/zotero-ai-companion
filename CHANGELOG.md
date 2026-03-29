@@ -3,6 +3,23 @@
 All notable changes to Zotero AI Companion are documented here.
 Format: Keep a Changelog · Versioning: Semantic Versioning
 
+## [0.5.0] - 2026-03-29
+
+### Added
+- **Tavily web search source**: External web discovery via Tavily API; detects item type (PDF direct link → `report`, YouTube/Vimeo → `videoRecording`, otherwise `webpage`); domain used as publisher fallback; title stripped of `[PDF]`/`(PDF)` prefixes; year extracted from URL path; tags generated from domain + capitalised title words
+- **Item type icons in Discovery panel**: Phosphor icons before each result title — `Article` for journal articles, `FilePdf` for PDFs, `Video` for video, `Globe` for webpages, `FileDashed` for unknown types; icon and title share the same colour
+- **Tag pills in Discovery panel**: Up to 5 keyword tags displayed as pill badges below each result abstract; MeSH terms / author keywords for PubMed, OpenAlex topics/keywords, Europe PMC mesh+keywords; word-frequency fallback for tagless items; all lowercase, split on spaces (no multi-word tags)
+- **Search history tab in Discovery panel**: Tab bar with Search / History views; lists recent searches with query, sources, result count, timestamp; clicking a history entry restores filters and re-runs; "Clear all" button
+
+### Changed
+- **Discovery import — collection assignment**: Items with DOI or PMID now import via `Zotero.Translate.Search` (`collections: false` when no collection selected, matching Zotero's own `lookup.js`); items without identifiers fall back to `saveManual()`
+- **Discovery import — web item author**: When `r.authors` is empty and a URL is present, domain is used as corporate author (e.g. `who.int`) so Zotero doesn't show a blank creator
+- **Discovery import — PDF rename**: Attachment returned by `importFromURL` is renamed to `PDF.pdf` via `renameAttachmentFile()` for `report`-type items
+- **Discovery import — web item type**: Tavily results set `item_type` correctly; `saveManual()` maps `report`→Zotero report, `videoRecording`→videoRecording, `webpage`→webpage, fallback `journalArticle`
+- **Tag visibility**: Tag pill colours updated to `#a6adc8` text / `#585b70` border / `#313244` background (was near-invisible `#6c7086` / `#45475a` / `#1e1e2e`)
+- **Abstract line clamp**: Collapsed abstract shows 5 lines (was 3)
+- `DISCOVERY_SOURCES_VERSION` bumped to 3 to re-seed Tavily as default-enabled for existing users
+
 ## [0.4.0] - 2026-03-29
 ### Added
 - **Author tab**: New profile view in ItemPaneTab showing all items by an author fetched from Neo4j; each card displays title (yyyy), collapsible abstract, and item-type icon
