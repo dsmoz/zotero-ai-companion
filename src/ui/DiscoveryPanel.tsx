@@ -60,13 +60,22 @@ function getItemDisplayType(r: DiscoveryResult): 'article' | 'pdf' | 'video' | '
   return 'unknown';
 }
 
+const ITEM_TYPE_COLOR: Record<string, string> = {
+  article: 'var(--accent, #89b4fa)',
+  pdf:     'var(--accent, #89b4fa)',
+  video:   'var(--accent, #89b4fa)',
+  webpage: 'var(--accent, #89b4fa)',
+  unknown: '#585b70',
+};
+
 function ItemTypeIcon({ type }: { type: 'article' | 'pdf' | 'video' | 'webpage' | 'unknown' }) {
   const s: React.CSSProperties = { flexShrink: 0, marginTop: 1 };
-  if (type === 'pdf')     return <FilePdf    size={14} color="#f38ba8" style={s} />;
-  if (type === 'video')   return <Video      size={14} color="#cba6f7" style={s} />;
-  if (type === 'webpage') return <Globe      size={14} color="#89dceb" style={s} />;
-  if (type === 'unknown') return <FileDashed size={14} color="#585b70" style={s} />;
-  return                         <Article    size={14} color="#6c7086" style={s} />;
+  const color = ITEM_TYPE_COLOR[type];
+  if (type === 'pdf')     return <FilePdf    size={14} color={color} style={s} />;
+  if (type === 'video')   return <Video      size={14} color={color} style={s} />;
+  if (type === 'webpage') return <Globe      size={14} color={color} style={s} />;
+  if (type === 'unknown') return <FileDashed size={14} color={color} style={s} />;
+  return                         <Article    size={14} color={color} style={s} />;
 }
 
 function ScoreBadge({ score }: { score?: number }) {
