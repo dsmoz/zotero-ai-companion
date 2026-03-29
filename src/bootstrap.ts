@@ -350,20 +350,39 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
       for (const r of results) {
         try {
           const cleanDoi = r.doi ? normDoi(r.doi) : '';
-          console.log('[AI Import] processing:', r.title?.slice(0, 50), '| DOI:', cleanDoi, '| PMID:', r.pmid);
-          const item = await saveManual(r, cleanDoi, collectionID);
-          if (collectionID) console.log('[AI Import] saved to collection:', activeCollection?.name);
+          const pmid = r.pmid ? String(r.pmid).trim() : '';
+          console.log('[AI Import] processing:', r.title?.slice(0, 50), '| DOI:', cleanDoi, '| PMID:', pmid);
 
-          // Attach full text PDF via Zotero's OA resolver
-          try {
-            await (Zotero as any).Attachments.addAvailableFile(item, {});
-            console.log('[AI Import] PDF fetch triggered for:', r.title?.slice(0, 50));
-          } catch (pdfErr) {
-            console.warn('[AI Import] PDF attach failed for', r.title?.slice(0, 50), pdfErr);
+          if (cleanDoi || pmid) {
+            // Use Translate.Search for items with identifiers — handles collection + PDFs automatically
+            try {
+              const translate = new (Zotero as any).Translate.Search();
+              const identifier = cleanDoi ? { DOI: cleanDoi } : { PMID: pmid };
+              translate.setIdentifier(identifier);
+              const translators = await translate.getTranslators();
+              if (translators && translators.length > 0) {
+                translate.setTranslator(translators);
+                const savedItems = await translate.translate({
+                  libraryID: (Zotero as any).Libraries.userLibraryID,
+                  collections: collectionID ? [collectionID] : [],
+                  saveAttachments: true,
+                });
+                console.log('[AI Import] Translate.Search saved', savedItems?.length ?? 0, 'item(s) for', r.title?.slice(0, 50));
+              } else {
+                console.warn('[AI Import] No translators for identifier, falling back to manual');
+                await saveManual(r, cleanDoi, collectionID);
+              }
+            } catch (translateErr) {
+              console.warn('[AI Import] Translate.Search failed, falling back to manual:', translateErr);
+              await saveManual(r, cleanDoi, collectionID);
+            }
+          } else {
+            // No identifier — manual save only
+            await saveManual(r, cleanDoi, collectionID);
           }
 
           imported++;
-          console.log('[AI Import] saved:', r.title?.slice(0, 50));
+          if (collectionID) console.log('[AI Import] added to collection:', activeCollection?.name);
         } catch (e) {
           console.error('[AI Import] failed for', r.title?.slice(0, 50), e);
           failed++;
