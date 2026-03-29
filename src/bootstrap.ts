@@ -346,6 +346,21 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
         // Set collection before saving — this is the correct way in Zotero 7
         if (colID) item.setCollections([colID]);
         await item.saveTx();
+
+        // For direct PDF links, download and attach the file
+        if (zoteroType === 'report' && r.url?.toLowerCase().endsWith('.pdf')) {
+          try {
+            await (Zotero as any).Attachments.importFromURL({
+              url: r.url,
+              parentItemID: item.id,
+              title: r.title ?? 'Attachment',
+              fileBaseName: r.title?.slice(0, 60).replace(/[^a-z0-9]/gi, '_') ?? 'attachment',
+            });
+          } catch (pdfErr) {
+            console.warn('[AI Import] PDF download failed for', r.url, pdfErr);
+          }
+        }
+
         return item;
       };
 
