@@ -317,7 +317,7 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
       const normDoi = (doi: string) =>
         doi.replace(/^https?:\/\/doi\.org\//i, '').replace(/^doi:\s*/i, '').trim();
 
-      const saveManual = async (r: any, cleanDoi: string) => {
+      const saveManual = async (r: any, cleanDoi: string, colID: number | null) => {
         const item = new (Zotero as any).Item('journalArticle');
         item.setField('title', r.title ?? '');
         if (r.journal) item.setField('publicationTitle', r.journal);
@@ -333,6 +333,8 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
         );
         const abstract = (r.abstract || r.snippet || '').replace(/<[^>]+>/g, ' ').trim();
         if (abstract) item.setField('abstractNote', abstract);
+        // Set collection before saving — this is the correct way in Zotero 7
+        if (colID) item.setCollections([colID]);
         await item.saveTx();
         return item;
       };
@@ -348,14 +350,8 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
         try {
           const cleanDoi = r.doi ? normDoi(r.doi) : '';
           console.log('[AI Import] processing:', r.title?.slice(0, 50), '| DOI:', cleanDoi, '| PMID:', r.pmid);
-          const item = await saveManual(r, cleanDoi);
-
-          // Add to active collection if one is selected
-          if (activeCollection) {
-            activeCollection.addItem(item.id);
-            await activeCollection.saveTx();
-            console.log('[AI Import] added to collection:', activeCollection.name);
-          }
+          const item = await saveManual(r, cleanDoi, collectionID);
+          if (collectionID) console.log('[AI Import] saved to collection:', activeCollection?.name);
 
           // Attach full text PDF via Zotero's OA resolver
           try {
