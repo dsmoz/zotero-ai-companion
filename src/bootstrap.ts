@@ -309,6 +309,71 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
       break;
     }
 
+    case 'importDiscoveryResults': {
+      const results: any[] = event?.detail?.results ?? [];
+      const listenerId: string = event?.detail?.listenerId ?? '';
+      let imported = 0, failed = 0, duplicates = 0;
+
+      function normDoi(doi: string) {
+        return doi.replace(/^https?:\/\/doi\.org\//i, '').replace(/^doi:\s*/i, '').trim();
+      }
+
+      for (const r of results) {
+        try {
+          const cleanDoi = r.doi ? normDoi(r.doi) : '';
+          let savedByLookup = false;
+
+          if (cleanDoi || r.pmid) {
+            const idObj = cleanDoi ? { DOI: cleanDoi } : { PMID: r.pmid };
+            await new Promise<void>((resolve) => {
+              const translate = new (Zotero as any).Translate.Search();
+              translate.setIdentifier(idObj);
+              translate.setHandler('translators', (_: any, translators: any[]) => {
+                if (!translators?.length) { resolve(); return; }
+                translate.setTranslator(translators);
+                translate.translate();
+              });
+              translate.setHandler('done', (_: any, success: boolean) => {
+                if (success) savedByLookup = true;
+                resolve();
+              });
+              translate.setHandler('error', () => resolve());
+              translate.getTranslators();
+            });
+          }
+
+          if (!savedByLookup) {
+            const item = new (Zotero as any).Item('journalArticle');
+            item.setField('title', r.title);
+            if (r.journal) item.setField('publicationTitle', r.journal);
+            if (r.year)    item.setField('date', r.year);
+            if (cleanDoi)  item.setField('DOI', cleanDoi);
+            if (r.url)     item.setField('url', r.url);
+            item.setCreators(
+              (r.authors ?? []).map((a: string) => {
+                const parts = a.trim().split(/\s+/);
+                const lastName = parts.pop() ?? a;
+                return { firstName: parts.join(' '), lastName, creatorType: 'author' };
+              })
+            );
+            const abstract = (r.abstract || r.snippet || '').replace(/<[^>]+>/g, ' ').trim();
+            if (abstract) item.setField('abstractNote', abstract);
+            await item.saveTx();
+          }
+          imported++;
+        } catch (e) {
+          console.error('[AI Import] bootstrap failed for', r.title, e);
+          failed++;
+        }
+      }
+
+      win.dispatchEvent(new CustomEvent('zotero-ai-import-result', {
+        detail: { listenerId, imported, failed, duplicates },
+        bubbles: true,
+      }));
+      break;
+    }
+
     case 'applyReadingPrefs': {
       const fontSize = String(event?.detail?.fontSize ?? 13) + 'px';
       const textColor = String(event?.detail?.textColor ?? '#cdd6f4');

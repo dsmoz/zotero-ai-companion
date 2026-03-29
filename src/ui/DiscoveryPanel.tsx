@@ -106,14 +106,10 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
     setImporting(true);
     setImportMsg(null);
     try {
-      const importResults = await importToZotero(toImport);
-      const ok = importResults.filter(r => r.success).length;
-      const dupes = importResults.filter(r => r.duplicate).length;
-      const failed = importResults.filter(r => !r.success);
-      const firstErr = failed[0]?.error ?? '';
-      let msg = `${ok} imported`;
-      if (dupes) msg += ` (${dupes} already in library)`;
-      if (failed.length) msg += `, ${failed.length} failed${firstErr ? ': ' + firstErr : ''}`;
+      const { imported, duplicates, failed } = await importToZotero(toImport);
+      let msg = `${imported} imported`;
+      if (duplicates) msg += ` (${duplicates} already in library)`;
+      if (failed) msg += `, ${failed} failed`;
       setImportMsg(msg);
       setSelected(new Set());
     } catch (e: any) {
