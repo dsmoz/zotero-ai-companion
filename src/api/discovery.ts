@@ -26,6 +26,7 @@ export interface DiscoveryResult {
   oa_status?: string;
   score?: number;  // relevance score 0–1, present when score_mode is set
   item_type?: string;  // 'webpage' | 'report' | 'videoRecording' — set by web sources
+  tags?: string[];     // MeSH terms, author keywords, OpenAlex topics
 }
 
 export interface DiscoveryFilters {

@@ -345,6 +345,9 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
         if (abstract) item.setField('abstractNote', abstract);
         // Set collection before saving — this is the correct way in Zotero 7
         if (colID) item.setCollections([colID]);
+        if (r.tags?.length) {
+          r.tags.forEach((tag: string) => item.addTag(tag));
+        }
         await item.saveTx();
 
         // For web items, attach snapshot (webpage) or download PDF (report)
@@ -402,6 +405,12 @@ async function handleCommand(command: string, win: Window, event?: CustomEvent) 
                   saveAttachments: true,
                 });
                 console.log('[AI Import] Translate.Search saved', savedItems?.length ?? 0, 'item(s) for', r.title?.slice(0, 50));
+                if (r.tags?.length && savedItems?.length) {
+                  for (const saved of savedItems) {
+                    r.tags.forEach((tag: string) => saved.addTag(tag));
+                    await saved.saveTx();
+                  }
+                }
               } else {
                 console.warn('[AI Import] No translators for identifier, falling back to manual');
                 await saveManual(r, cleanDoi, collectionID);
