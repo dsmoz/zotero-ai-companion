@@ -440,16 +440,16 @@ export function DiscoveryPanel({ seedQuery = '', seedAuthor = '' }: Props) {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: textColor, marginBottom: 3, lineHeight: 1.35, fontSize: fontSize, fontWeight: 500 }}>{r.title}</div>
+                  <div style={{ color: 'var(--accent, #89b4fa)', marginBottom: 3, lineHeight: 1.35, fontSize: fontSize, fontWeight: 500 }}>{r.title}</div>
                   <div style={{ color: '#6c7086', fontSize: fontSize * 0.84 }}>
                     {r.authors.slice(0, 3).join(', ')}{r.authors.length > 3 ? ' et al.' : ''}
                     {(r.journal || r.year) && ' · '}
                     {r.journal}{r.journal && r.year && ' · '}{r.year}
-                    {r.source && <span style={{ marginLeft: 4, color: '#45475a' }}>[{r.source}]</span>}
+                    {r.source && <span style={{ marginLeft: 4, color: 'var(--accent, #89b4fa)', opacity: 0.7 }}>[{r.source}]</span>}
                   </div>
                   {r.doi && (
-                    <div style={{ fontSize: fontSize * 0.78, color: '#585b70', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <span style={{ color: '#6c7086' }}>DOI: </span>{r.doi}
+                    <div style={{ fontSize: fontSize * 0.78, color: textColor, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.7 }}>
+                      <span style={{ color: 'var(--accent, #89b4fa)', opacity: 1 }}>DOI: </span>{r.doi}
                     </div>
                   )}
                 </div>
