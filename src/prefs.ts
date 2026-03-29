@@ -91,7 +91,7 @@ const DISCOVERY_SOURCES_PREF = `${PREFIX}.discovery.sourcesEnabled`;
 const DISCOVERY_MIGRATED_PREF = `${PREFIX}.discovery.migrated`;
 // Bump this when default_enabled_in_plugin changes for any source so that
 // existing users get the new defaults applied on next Zotero start.
-const DISCOVERY_SOURCES_VERSION = 2;
+const DISCOVERY_SOURCES_VERSION = 3;
 const DISCOVERY_SOURCES_VERSION_PREF = `${PREFIX}.discovery.sourcesVersion`;
 
 /** Shape stored in the JSON string pref. */
